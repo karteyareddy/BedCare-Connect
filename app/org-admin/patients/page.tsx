@@ -158,7 +158,7 @@ export default function ManagePatientsPage() {
 
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md h-[90vh] overflow-y-auto">
+                    <div className="bg-white text-gray-900 p-8 rounded-xl shadow-lg w-full max-w-md h-[90vh] overflow-y-auto">
                         <h2 className="text-xl font-bold mb-4">Add New Patient</h2>
                         <form onSubmit={handleCreate} className="space-y-4">
                             <div>
@@ -191,9 +191,11 @@ export default function ManagePatientsPage() {
                                 <select className="mt-1 block w-full rounded-md border-gray-300 border p-2"
                                     value={formData.caretaker_id} onChange={e => setFormData({ ...formData, caretaker_id: e.target.value })}>
                                     <option value="">Select a Caretaker</option>
-                                    {caretakers.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
+                                    {caretakers
+                                        .filter(c => !patients.some(p => p.caretaker_id === c.id))
+                                        .map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
                                 </select>
                             </div>
 

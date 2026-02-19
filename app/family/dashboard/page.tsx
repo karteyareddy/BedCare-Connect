@@ -48,6 +48,8 @@ export default function FamilyDashboard() {
         }
     }
 
+    const [selectedImage, setSelectedImage] = useState<string | null>(null)
+
     return (
         <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">{patient ? `${patient.name}'s Care Log` : 'Care Log'}</h2>
@@ -55,7 +57,7 @@ export default function FamilyDashboard() {
             {loading ? (
                 <div className="flex justify-center p-10">Loading...</div>
             ) : (
-                <div className="space-y-6 relative border-l-2 border-gray-200 ml-3 pl-6 pb-10">
+                <div className="space-y-6 relative border-l-2 border-gray-200 ml-3 pl-6 pb-10 max-w-3xl">
                     {tasks.map((task) => (
                         <div key={task.id} className="relative mb-8">
                             <span className={`absolute -left-[33px] top-0 flex items-center justify-center w-8 h-8 rounded-full ring-4 ring-white ${task.status === 'completed' ? 'bg-green-500' : 'bg-gray-300'}`}>
@@ -71,14 +73,16 @@ export default function FamilyDashboard() {
                                 {task.status === 'completed' && task.proof_url && (
                                     <div className="mt-3">
                                         <p className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">Proof of Care</p>
-                                        <div className="relative h-48 w-full rounded-lg overflow-hidden bg-gray-100 border">
-                                            {/* Using standard img for external Supabase URLs to avoid Next.js domain config issues in demo */}
+                                        <button
+                                            onClick={() => setSelectedImage(task.proof_url)}
+                                            className="relative h-48 w-full md:w-64 rounded-lg overflow-hidden bg-gray-100 border hover:opacity-90 transition-opacity"
+                                        >
                                             <img
                                                 src={task.proof_url}
                                                 alt="Task Proof"
                                                 className="object-cover w-full h-full"
                                             />
-                                        </div>
+                                        </button>
                                     </div>
                                 )}
                                 {task.status === 'pending' && (
@@ -90,6 +94,21 @@ export default function FamilyDashboard() {
                     {tasks.length === 0 && (
                         <p className="text-gray-500 italic">No tasks recorded yet.</p>
                     )}
+                </div>
+            )}
+
+            {/* Image Modal */}
+            {selectedImage && (
+                <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setSelectedImage(null)}>
+                    <button className="absolute top-4 right-4 text-white hover:text-gray-300 p-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                    <img
+                        src={selectedImage}
+                        alt="Full proof"
+                        className="max-w-full max-h-[90vh] object-contain rounded-lg"
+                        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking image
+                    />
                 </div>
             )}
         </div>

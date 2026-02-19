@@ -165,6 +165,18 @@ export default function ManageTasksPage() {
                                     <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
                                 </div>
                             )}
+                            {task.proof_url && (
+                                <div className="mt-3 pt-3 border-t border-gray-100">
+                                    <p className="text-xs font-semibold text-gray-500 mb-1">Completion Proof:</p>
+                                    <a href={task.proof_url} target="_blank" rel="noopener noreferrer" className="block relative h-32 w-full overflow-hidden rounded-md border border-gray-200">
+                                        <img
+                                            src={task.proof_url}
+                                            alt="Task Proof"
+                                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                        />
+                                    </a>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ))}

@@ -30,21 +30,29 @@ export default function AiChatbot() {
         setLoading(true)
 
         try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [...messages, { role: 'user', content: userMsg }]
-                })
-            })
+            // Client-side Gemini call for Android/Static Export support
+            const { GoogleGenerativeAI } = await import("@google/generative-ai");
+            const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
-            const data = await response.json()
-            if (data.error) throw new Error(data.error)
+            if (!apiKey) throw new Error("Gemini API Key not found");
 
-            setMessages(prev => [...prev, { role: 'model', content: data.text }])
-        } catch (error) {
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+            // Construct prompt from history
+            const history = messages.map(m => `${m.role === 'user' ? 'User' : 'Model'}: ${m.content}`).join('\n');
+            const prompt = `You are a helpful assistant for BedCare, a hospital management system. \n\nConversation History:\n${history}\nUser: ${userMsg}\nModel:`;
+
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
+
+            setMessages(prev => [...prev, { role: 'model', content: text }])
+
+        } catch (error: any) {
             console.error('Chat error:', error)
-            setMessages(prev => [...prev, { role: 'model', content: "I'm sorry, I encountered an error. Please try again." }])
+            // DEBUG: Show actual error in UI
+            setMessages(prev => [...prev, { role: 'model', content: `Error: ${error.message || JSON.stringify(error)}` }])
         } finally {
             setLoading(false)
         }
@@ -80,8 +88,8 @@ export default function AiChatbot() {
                 {messages.map((msg, idx) => (
                     <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[80%] p-3 rounded-xl text-sm ${msg.role === 'user'
-                                ? 'bg-indigo-600 text-white rounded-br-none'
-                                : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm'
+                            ? 'bg-indigo-600 text-white rounded-br-none'
+                            : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm'
                             }`}>
                             {msg.content}
                         </div>
