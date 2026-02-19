@@ -107,7 +107,10 @@ export default function CaretakerChatPage() {
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chats' }, (payload) => {
                     const newMsg = payload.new
                     if (newMsg.initiator_id === selectedFamilyId || newMsg.recipient_id === selectedFamilyId) {
-                        setFamilyMessages(prev => [...prev, newMsg])
+                        setFamilyMessages(prev => {
+                            if (prev.find(m => m.id === newMsg.id)) return prev
+                            return [...prev, newMsg]
+                        })
                     }
                 })
                 .subscribe()
@@ -161,17 +164,44 @@ export default function CaretakerChatPage() {
         const text = familyInput.trim()
         setFamilyInput('')
 
-        const { error } = await supabase.from('chats').insert([
+        // Optimistic update
+        const tempId = Date.now().toString() // Temporary ID
+        const optimisticMsg = {
+            id: tempId,
+            initiator_id: userId,
+            recipient_id: selectedFamilyId,
+            message: text,
+            created_at: new Date().toISOString()
+        }
+
+        // Add immediately
+        setFamilyMessages(prev => [...prev, optimisticMsg])
+
+        const { data, error } = await supabase.from('chats').insert([
             {
                 initiator_id: userId,
                 recipient_id: selectedFamilyId,
                 message: text
             }
-        ])
+        ]).select().single()
 
         if (error) {
             console.error('Error sending message:', error)
             alert('Failed to send')
+            // Rollback if needed, or just let user know. 
+            // Simple rollback: remove the optimistic message
+            setFamilyMessages(prev => prev.filter(m => m.id !== tempId))
+        } else if (data) {
+            // Replace optimistic with real one (mostly for ID sync)
+            setFamilyMessages(prev => {
+                // Check if the real message (data.id) is already in the list (from subscription)
+                if (prev.find(m => m.id === data.id)) {
+                    // Subscription beat us. Remove optimistic one.
+                    return prev.filter(m => m.id !== tempId)
+                }
+                // Subscription hasn't arrived or we beat it. Update optimistic to real.
+                return prev.map(m => m.id === tempId ? data : m)
+            })
         }
     }
 
