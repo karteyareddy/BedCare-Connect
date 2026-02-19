@@ -20,27 +20,39 @@ export default function PatientChatPage() {
     }, [])
 
     useEffect(() => {
-        if (!userId) return
+        if (!userId || !selectedUser) return
 
+        // 1. Initial Load
+        loadChatHistory(selectedUser)
+
+        // 2. Polling Interval (Every 2 seconds)
+        const interval = setInterval(() => {
+            const fetchUpdates = async () => {
+                const { data: history } = await supabase
+                    .from('chats')
+                    .select('*')
+                    .or(`and(initiator_id.eq.${userId},recipient_id.eq.${selectedUser.user_id}),and(initiator_id.eq.${selectedUser.user_id},recipient_id.eq.${userId})`)
+                    .order('created_at', { ascending: true })
+
+                if (history) {
+                    // Simple Diff check or just replace.
+                    // To avoid scroll jumping, we ideally check length, but replacing is safer for consistency if array is small.
+                    setMessages(history)
+                }
+            }
+            fetchUpdates()
+        }, 2000)
+
+        // 3. Keep Subscription
         const channel = supabase
             .channel('public:chats')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chats' }, (payload) => {
-                const newMessage = payload.new
-                // If message is for me or from me
-                if (newMessage.recipient_id === userId || newMessage.initiator_id === userId) {
-                    // Update messages if looking at that conversation
-                    if (selectedUser && (
-                        (newMessage.initiator_id === selectedUser.user_id && newMessage.recipient_id === userId) ||
-                        (newMessage.initiator_id === userId && newMessage.recipient_id === selectedUser.user_id)
-                    )) {
-                        setMessages(prev => [...prev, newMessage])
-                        scrollToBottom()
-                    }
-                }
+                // Keep this for immediate updates if they work
             })
             .subscribe()
 
         return () => {
+            clearInterval(interval)
             supabase.removeChannel(channel)
         }
     }, [userId, selectedUser])
