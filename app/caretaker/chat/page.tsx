@@ -84,68 +84,240 @@ export default function CaretakerChatPage() {
         }
     }
 
+    const [activeTab, setActiveTab] = useState<'ai' | 'family'>('ai')
+    const [familyMembers, setFamilyMembers] = useState<any[]>([])
+    const [selectedFamilyId, setSelectedFamilyId] = useState('')
+    const [familyMessages, setFamilyMessages] = useState<any[]>([])
+    const [familyInput, setFamilyInput] = useState('')
+    const [caretakerId, setCaretakerId] = useState<string | null>(null)
+    const [userId, setUserId] = useState<string | null>(null)
+
+    useEffect(() => {
+        if (activeTab === 'family') {
+            fetchFamilyMembers()
+        }
+    }, [activeTab])
+
+    useEffect(() => {
+        if (selectedFamilyId) {
+            fetchFamilyHistory(selectedFamilyId)
+
+            const channel = supabase
+                .channel(`public:chats:${selectedFamilyId}`)
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chats' }, (payload) => {
+                    const newMsg = payload.new
+                    if (newMsg.initiator_id === selectedFamilyId || newMsg.recipient_id === selectedFamilyId) {
+                        setFamilyMessages(prev => [...prev, newMsg])
+                    }
+                })
+                .subscribe()
+
+            return () => {
+                supabase.removeChannel(channel)
+            }
+        }
+    }, [selectedFamilyId])
+
+    const fetchFamilyMembers = async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        setUserId(user.id)
+
+        const { data: caretaker } = await supabase.from('caretakers').select('id, organization_id').eq('user_id', user.id).single()
+        if (caretaker) {
+            setCaretakerId(caretaker.id)
+            // Fetch patients assigned to this caretaker
+            const { data: assignedPatients } = await supabase.from('patients').select('id').eq('caretaker_id', caretaker.id)
+
+            if (assignedPatients && assignedPatients.length > 0) {
+                const patientIds = assignedPatients.map(p => p.id)
+                // Fetch profiles (families) linked to these patients
+                const { data: families } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, linked_patient_id, patients:linked_patient_id(name)')
+                    .in('linked_patient_id', patientIds)
+                    .eq('role', 'family')
+
+                setFamilyMembers(families || [])
+            }
+        }
+    }
+
+    const fetchFamilyHistory = async (familyId: string) => {
+        if (!userId) return
+        const { data } = await supabase
+            .from('chats')
+            .select('*')
+            .or(`and(initiator_id.eq.${userId},recipient_id.eq.${familyId}),and(initiator_id.eq.${familyId},recipient_id.eq.${userId})`)
+            .order('created_at', { ascending: true })
+
+        setFamilyMessages(data || [])
+    }
+
+    const handleSendFamily = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!familyInput.trim() || !selectedFamilyId || !userId) return
+
+        const text = familyInput.trim()
+        setFamilyInput('')
+
+        const { error } = await supabase.from('chats').insert([
+            {
+                initiator_id: userId,
+                recipient_id: selectedFamilyId,
+                message: text
+            }
+        ])
+
+        if (error) {
+            console.error('Error sending message:', error)
+            alert('Failed to send')
+        }
+    }
+
     return (
         <div className="flex flex-col h-full">
             <div className="bg-white p-4 shadow-sm z-10">
-                <h1 className="text-xl font-bold text-gray-800 mb-2">AI Medical Assistant</h1>
-                <select
-                    className="w-full p-2 border rounded-lg text-sm bg-gray-50"
-                    value={selectedPatientId}
-                    onChange={(e) => {
-                        setSelectedPatientId(e.target.value)
-                        setMessages([{ role: 'assistant', content: `Context switched to ${patients.find(p => p.id === e.target.value)?.name || 'General'}. How can I help?` }])
-                    }}
-                >
-                    <option value="">Select Patient for Context...</option>
-                    {patients.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                </select>
-                {selectedPatientId && (
-                    <div className="text-xs text-indigo-600 mt-1 flex items-center gap-1">
-                        <Bot size={12} /> Using medical context for {patients.find(p => p.id === selectedPatientId)?.name}
-                    </div>
+                <div className="flex gap-4 mb-4 border-b">
+                    <button
+                        className={`pb-2 px-4 font-medium ${activeTab === 'ai' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
+                        onClick={() => setActiveTab('ai')}
+                    >
+                        AI Assistant
+                    </button>
+                    <button
+                        className={`pb-2 px-4 font-medium ${activeTab === 'family' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
+                        onClick={() => setActiveTab('family')}
+                    >
+                        Family Chat
+                    </button>
+                </div>
+
+                {activeTab === 'ai' && (
+                    <>
+                        <h1 className="text-xl font-bold text-gray-800 mb-2">AI Medical Assistant</h1>
+                        <select
+                            className="w-full p-2 border rounded-lg text-sm bg-gray-50"
+                            value={selectedPatientId}
+                            onChange={(e) => {
+                                setSelectedPatientId(e.target.value)
+                                setMessages([{ role: 'assistant', content: `Context switched to ${patients.find(p => p.id === e.target.value)?.name || 'General'}. How can I help?` }])
+                            }}
+                        >
+                            <option value="">Select Patient for Context...</option>
+                            {patients.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                        </select>
+                        {selectedPatientId && (
+                            <div className="text-xs text-indigo-600 mt-1 flex items-center gap-1">
+                                <Bot size={12} /> Using medical context for {patients.find(p => p.id === selectedPatientId)?.name}
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {activeTab === 'family' && (
+                    <>
+                        <h1 className="text-xl font-bold text-gray-800 mb-2">Family Chat</h1>
+                        <select
+                            className="w-full p-2 border rounded-lg text-sm bg-gray-50"
+                            value={selectedFamilyId}
+                            onChange={(e) => setSelectedFamilyId(e.target.value)}
+                        >
+                            <option value="">Select Family Member...</option>
+                            {familyMembers.map(f => (
+                                <option key={f.id} value={f.id}>{f.full_name} (Patient: {f.patients?.name})</option>
+                            ))}
+                        </select>
+                    </>
                 )}
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                {messages.map((msg, idx) => (
-                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${msg.role === 'user'
-                            ? 'bg-indigo-600 text-white rounded-br-none'
-                            : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
-                            }`}>
-                            <p className="text-sm shadow-black drop-shadow-sm">{msg.content}</p>
-                        </div>
-                    </div>
-                ))}
-                {loading && (
-                    <div className="flex justify-start">
-                        <div className="bg-white p-4 rounded-2xl rounded-bl-none shadow-sm border border-gray-100 flex items-center gap-2 text-gray-500 text-sm">
-                            <Loader2 className="animate-spin h-4 w-4" /> Thinking...
-                        </div>
-                    </div>
+                {activeTab === 'ai' ? (
+                    <>
+                        {messages.map((msg, idx) => (
+                            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${msg.role === 'user'
+                                    ? 'bg-indigo-600 text-white rounded-br-none'
+                                    : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
+                                    }`}>
+                                    <p className="text-sm shadow-black drop-shadow-sm">{msg.content}</p>
+                                </div>
+                            </div>
+                        ))}
+                        {loading && (
+                            <div className="flex justify-start">
+                                <div className="bg-white p-4 rounded-2xl rounded-bl-none shadow-sm border border-gray-100 flex items-center gap-2 text-gray-500 text-sm">
+                                    <Loader2 className="animate-spin h-4 w-4" /> Thinking...
+                                </div>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <>
+                        {familyMessages.map((msg) => {
+                            const isMe = msg.initiator_id === userId
+                            return (
+                                <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[80%] rounded-2xl p-3 shadow-sm ${isMe
+                                        ? 'bg-indigo-600 text-white rounded-br-none'
+                                        : 'bg-white text-gray-800 rounded-bl-none border'
+                                        }`}>
+                                        <p className="text-sm">{msg.message}</p>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                        {familyMessages.length === 0 && selectedFamilyId && (
+                            <div className="text-center text-gray-500 mt-10">No messages yet. Start the conversation!</div>
+                        )}
+                        {!selectedFamilyId && (
+                            <div className="text-center text-gray-500 mt-10">Select a family member to chat.</div>
+                        )}
+                    </>
                 )}
                 <div ref={messagesEndRef} />
             </div>
 
-            <div className="p-4 bg-white border-t pb-24"> {/* Extra padding for bottom nav */}
-                <form onSubmit={handleSend} className="flex gap-2">
-                    <input
-                        type="text"
-                        className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
-                        placeholder="Ask about medications, care..."
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                    />
-                    <button
-                        type="submit"
-                        disabled={loading || !input.trim()}
-                        className="bg-indigo-600 text-white p-3 rounded-full hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-                    >
-                        <Send size={20} />
-                    </button>
-                </form>
+            <div className="p-4 bg-white border-t pb-24">
+                {activeTab === 'ai' ? (
+                    <form onSubmit={handleSend} className="flex gap-2">
+                        <input
+                            type="text"
+                            className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
+                            placeholder="Ask about medications, care..."
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                        />
+                        <button
+                            type="submit"
+                            disabled={loading || !input.trim()}
+                            className="bg-indigo-600 text-white p-3 rounded-full hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                        >
+                            <Send size={20} />
+                        </button>
+                    </form>
+                ) : (
+                    <form onSubmit={handleSendFamily} className="flex gap-2">
+                        <input
+                            type="text"
+                            className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
+                            placeholder="Message family..."
+                            value={familyInput}
+                            onChange={(e) => setFamilyInput(e.target.value)}
+                            disabled={!selectedFamilyId}
+                        />
+                        <button
+                            type="submit"
+                            disabled={!familyInput.trim() || !selectedFamilyId}
+                            className="bg-indigo-600 text-white p-3 rounded-full hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                        >
+                            <Send size={20} />
+                        </button>
+                    </form>
+                )}
             </div>
         </div>
     )
