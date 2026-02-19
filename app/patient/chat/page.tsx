@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabaseClient'
 import { Send, User, Users, ChevronLeft } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 export default function PatientChatPage() {
     const [conversations, setConversations] = useState<any[]>([])
@@ -216,17 +217,23 @@ export default function PatientChatPage() {
                     </div>
 
                     <div className="flex-1 overflow-y-auto space-y-4 p-2">
-                        {messages.map((msg) => {
+                        {messages.map((msg, idx) => {
                             const isMe = msg.initiator_id === userId
                             return (
-                                <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    key={msg.id || idx}
+                                    className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                                >
                                     <div className={`max-w-[80%] rounded-2xl p-3 shadow-sm ${isMe
                                         ? 'bg-blue-600 text-white rounded-br-none'
                                         : 'bg-white text-gray-800 rounded-bl-none border'
                                         }`}>
                                         <p className="text-sm">{msg.message}</p>
                                     </div>
-                                </div>
+                                </motion.div>
                             )
                         })}
                         <div ref={messagesEndRef} />

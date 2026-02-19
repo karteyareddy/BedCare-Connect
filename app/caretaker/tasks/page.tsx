@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabaseClient'
 import { Camera, CheckCircle, Clock, UploadCloud, Loader2 } from 'lucide-react'
-import { Camera as CapacitorCamera, CameraResultType } from '@capacitor/camera'
+import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { saveToDevice, addToSyncQueue } from '@/lib/offlineStorage'
 import { useNetworkStatus } from '@/components/NetworkStatusProvider'
 
@@ -53,7 +53,8 @@ export default function CaretakerTasksPage() {
             const image = await CapacitorCamera.getPhoto({
                 quality: 90,
                 allowEditing: false,
-                resultType: CameraResultType.Base64
+                resultType: CameraResultType.Base64,
+                source: CameraSource.Camera
             })
 
             if (!image.base64String) return

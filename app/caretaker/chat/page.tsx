@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabaseClient'
 import { Send, Bot, User, Loader2, AlertTriangle, Users } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 export default function CaretakerChatPage() {
     // Shared State
@@ -306,14 +307,20 @@ export default function CaretakerChatPage() {
                 {activeTab === 'ai' && (
                     <>
                         {messages.map((msg, idx) => (
-                            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                                key={idx}
+                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            >
                                 <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${msg.role === 'user'
                                     ? 'bg-indigo-600 text-white rounded-br-none'
                                     : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
                                     }`}>
                                     <p className="text-sm shadow-black drop-shadow-sm">{msg.content}</p>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))}
                         {loading && (
                             <div className="flex justify-start">
@@ -327,17 +334,23 @@ export default function CaretakerChatPage() {
 
                 {activeTab === 'patient' && (
                     <>
-                        {patientMessages.map((msg) => {
+                        {patientMessages.map((msg, idx) => {
                             const isMe = msg.initiator_id === userId
                             return (
-                                <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    key={msg.id || idx}
+                                    className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                                >
                                     <div className={`max-w-[80%] rounded-2xl p-3 shadow-sm ${isMe
                                         ? 'bg-indigo-600 text-white rounded-br-none'
                                         : 'bg-white text-gray-800 rounded-bl-none border'
                                         }`}>
                                         <p className="text-sm">{msg.message}</p>
                                     </div>
-                                </div>
+                                </motion.div>
                             )
                         })}
                         {patientMessages.length === 0 && selectedPatientId && (
@@ -351,17 +364,23 @@ export default function CaretakerChatPage() {
 
                 {activeTab === 'family' && (
                     <>
-                        {familyMessages.map((msg) => {
+                        {familyMessages.map((msg, idx) => {
                             const isMe = msg.initiator_id === userId
                             return (
-                                <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    key={msg.id || idx}
+                                    className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                                >
                                     <div className={`max-w-[80%] rounded-2xl p-3 shadow-sm ${isMe
                                         ? 'bg-indigo-600 text-white rounded-br-none'
                                         : 'bg-white text-gray-800 rounded-bl-none border'
                                         }`}>
                                         <p className="text-sm">{msg.message}</p>
                                     </div>
-                                </div>
+                                </motion.div>
                             )
                         })}
                         {familyMessages.length === 0 && selectedFamilyId && (

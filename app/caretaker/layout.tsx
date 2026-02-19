@@ -36,10 +36,6 @@ export default function CaretakerLayout({
                         <Home size={24} />
                         <span className="text-[10px] mt-1 font-medium">Home</span>
                     </Link>
-                    <Link href="/caretaker/patients" className={`flex flex-col items-center p-3 w-full ${isActive('/caretaker/patients') ? 'text-indigo-600' : 'text-gray-500'}`}>
-                        <Users size={24} />
-                        <span className="text-[10px] mt-1 font-medium">Patients</span>
-                    </Link>
                     <Link href="/caretaker/tasks" className={`flex flex-col items-center p-3 w-full ${isActive('/caretaker/tasks') ? 'text-indigo-600' : 'text-gray-500'}`}>
                         <CheckSquare size={24} />
                         <span className="text-[10px] mt-1 font-medium">Tasks</span>

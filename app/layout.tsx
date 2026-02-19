@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NetworkStatusProvider } from "@/components/NetworkStatusProvider";
+import PageTransition from "@/components/PageTransition";
 
 
 const geistSans = Geist({
@@ -30,7 +31,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <NetworkStatusProvider>
-          {children}
+          <PageTransition>
+            {children}
+          </PageTransition>
         </NetworkStatusProvider>
       </body>
     </html>

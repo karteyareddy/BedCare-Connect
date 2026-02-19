@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabaseClient'
 import { useNetworkStatus } from '@/components/NetworkStatusProvider'
 import { addToSyncQueue } from '@/lib/offlineStorage'
 import { AlertCircle, Phone, User as UserIcon, CheckCircle, Clock } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 export default function PatientDashboard() {
     const [patient, setPatient] = useState<any>(null)
@@ -128,10 +129,18 @@ export default function PatientDashboard() {
     if (loading) return <div className="flex justify-center p-10">Loading...</div>
 
     return (
-        <div className="space-y-6">
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+        >
 
             {/* Emergency Button */}
-            <button
+            <motion.button
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1, type: "spring" }}
                 onClick={handleEmergency}
                 disabled={emergencyLoading}
                 className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-8 rounded-2xl shadow-lg flex flex-col items-center justify-center gap-2 animate-pulse active:scale-95 transition-transform"
@@ -139,10 +148,15 @@ export default function PatientDashboard() {
                 <AlertCircle size={48} />
                 <span className="text-2xl">EMERGENCY HELP</span>
                 <span className="text-xs font-normal opacity-80">(Tap to alert caretaker)</span>
-            </button>
+            </motion.button>
 
             {/* Caretaker Info */}
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+            <motion.div
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white p-5 rounded-xl shadow-sm border border-gray-100"
+            >
                 <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
                     <UserIcon size={20} className="text-blue-500" /> Your Caretaker
                 </h2>
@@ -159,10 +173,15 @@ export default function PatientDashboard() {
                 ) : (
                     <p className="text-gray-400 italic">No caretaker assigned yet.</p>
                 )}
-            </div>
+            </motion.div>
 
             {/* Family Members Info */}
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+            <motion.div
+                initial={{ x: 20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="bg-white p-5 rounded-xl shadow-sm border border-gray-100"
+            >
                 <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
                     <UserIcon size={20} className="text-purple-500" /> Your Family
                 </h2>
@@ -183,10 +202,14 @@ export default function PatientDashboard() {
                 ) : (
                     <p className="text-gray-400 italic">No family members linked yet.</p>
                 )}
-            </div>
+            </motion.div>
 
             {/* Tasks List */}
-            <div>
+            <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4 }}
+            >
                 <h2 className="text-lg font-semibold text-gray-800 mb-3 ml-1">Today&apos;s Schedule</h2>
                 <div className="space-y-3">
                     {tasks.length === 0 ? (
@@ -194,8 +217,14 @@ export default function PatientDashboard() {
                             No pending tasks for today.
                         </div>
                     ) : (
-                        tasks.map(task => (
-                            <div key={task.id} className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-400 flex justify-between items-center">
+                        tasks.map((task, index) => (
+                            <motion.div
+                                key={task.id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.4 + (index * 0.1) }}
+                                className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-400 flex justify-between items-center"
+                            >
                                 <div>
                                     <h3 className="font-bold text-gray-800">{task.title}</h3>
                                     <p className="text-sm text-gray-500">{task.description}</p>
@@ -204,11 +233,11 @@ export default function PatientDashboard() {
                                     <Clock size={12} />
                                     {task.due_date ? new Date(task.due_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Anytime'}
                                 </div>
-                            </div>
+                            </motion.div>
                         ))
                     )}
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     )
 }
