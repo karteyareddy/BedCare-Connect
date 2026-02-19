@@ -81,14 +81,14 @@ export default function PatientChatPage() {
             // 3. Get Family Members
             const { data: familyMembers } = await supabase
                 .from('profiles')
-                .select('user_id, full_name, phone') // Using user_id for chat linking
+                .select('id, full_name') // id is the user_id
                 .eq('linked_patient_id', patient.id)
                 .eq('role', 'family')
 
             if (familyMembers) {
                 familyMembers.forEach(fam => {
                     convos.push({
-                        user_id: fam.user_id,
+                        user_id: fam.id, // Profile ID is the Auth User ID
                         name: fam.full_name,
                         role: 'Family',
                         type: 'family'
@@ -104,6 +104,19 @@ export default function PatientChatPage() {
             setLoading(false)
         }
     }
+
+    // Handle Deep Linking
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const chatWithId = params.get('chatWith')
+
+        if (chatWithId && conversations.length > 0 && !selectedUser) {
+            const targetUser = conversations.find(c => c.user_id === chatWithId)
+            if (targetUser) {
+                loadChatHistory(targetUser)
+            }
+        }
+    }, [conversations])
 
     const loadChatHistory = async (otherUser: any) => {
         if (!userId) return

@@ -42,11 +42,17 @@ export default function PatientDashboard() {
                 // Fetch Family Members linked to this patient
                 const { data: familyData } = await supabase
                     .from('profiles')
-                    .select('id, user_id, full_name')
+                    .select('id, full_name') // id IS the user_id in profiles table
                     .eq('linked_patient_id', patientData.id)
                     .eq('role', 'family')
 
-                setFamilyMembers(familyData || [])
+                // Map results to ensure we have a 'user_id' property if needed, or update usage
+                const mappedFamily = familyData?.map(f => ({
+                    ...f,
+                    user_id: f.id // Map id to user_id for consistency
+                })) || []
+
+                setFamilyMembers(mappedFamily)
 
                 // Fetch Tasks (Today)
                 const { data: tasksData } = await supabase
@@ -152,6 +158,30 @@ export default function PatientDashboard() {
                     </div>
                 ) : (
                     <p className="text-gray-400 italic">No caretaker assigned yet.</p>
+                )}
+            </div>
+
+            {/* Family Members Info */}
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <UserIcon size={20} className="text-purple-500" /> Your Family
+                </h2>
+                {familyMembers.length > 0 ? (
+                    <div className="space-y-4">
+                        {familyMembers.map((member: any) => (
+                            <div key={member.id} className="flex justify-between items-center border-b last:border-0 pb-3 last:pb-0 border-gray-100">
+                                <div>
+                                    <p className="font-bold text-gray-900">{member.full_name}</p>
+                                    <p className="text-gray-500 text-xs">Family Member</p>
+                                </div>
+                                <a href={`/patient/chat?chatWith=${member.user_id}`} className="bg-purple-100 px-4 py-2 rounded-full text-purple-600 hover:bg-purple-200 text-sm font-bold flex items-center gap-2 transition-colors">
+                                    Chat
+                                </a>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-gray-400 italic">No family members linked yet.</p>
                 )}
             </div>
 
