@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Home, Users, CheckSquare, MessageSquare, Menu } from 'lucide-react'
 import LogoutButton from '@/components/LogoutButton'
 import { usePathname } from 'next/navigation'
+import AiChatbot from '@/components/AiChatbot'
 
 export default function CaretakerLayout({
     children,
@@ -49,6 +50,7 @@ export default function CaretakerLayout({
                     </Link>
                 </div>
             </nav>
+            <AiChatbot />
         </div>
     )
 }

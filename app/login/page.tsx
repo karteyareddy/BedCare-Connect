@@ -19,23 +19,36 @@ export default function LoginPage() {
         setLoading(true)
         setError(null)
 
+        const trimmedEmail = email.trim()
+
         try {
+            console.log('Attempting login for:', trimmedEmail)
             const { data, error } = await supabase.auth.signInWithPassword({
-                email,
+                email: trimmedEmail,
                 password,
             })
 
-            if (error) throw error
+            if (error) {
+                console.error('Login Error:', error)
+                throw error
+            }
+
+            console.log('Login successful, user:', data.user.id)
 
             if (data.user) {
                 // Fetch role from profiles table to be sure
-                const { data: profile } = await supabase
+                const { data: profile, error: profileError } = await supabase
                     .from('profiles')
                     .select('role')
                     .eq('id', data.user.id)
                     .single()
 
+                if (profileError) {
+                    console.error('Profile Fetch Error:', profileError)
+                }
+
                 const role = profile?.role || data.user.user_metadata.role || 'patient'
+                console.log('User Role:', role)
 
                 // Sync role to user_metadata for Middleware
                 if (data.user.user_metadata.role !== role) {
@@ -51,6 +64,7 @@ export default function LoginPage() {
                 else router.push('/patient/dashboard')
             }
         } catch (err: any) {
+            console.error('Catch Error:', err)
             setError(err.message || 'An error occurred during login')
         } finally {
             setLoading(false)

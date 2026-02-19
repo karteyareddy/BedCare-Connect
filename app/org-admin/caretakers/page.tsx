@@ -63,72 +63,26 @@ export default function ManageCaretakersPage() {
             const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
             if (!profile?.organization_id) throw new Error('No organization found for admin')
 
-            // 2. Create Auth User (using a temporary client handles this context cleanly or use admin api if available via server action)
-            // Since we are client-side and don't have service key exposed safely, we will use a workaround:
-            // We will sign up the user. This works if "Enable Email Confirmations" is off, or they verify.
-            // However, signing up creates a session. We don't want to log the admin out.
-            // We will use a secondary Supabase client instance (no session) to sign them up.
-
-            // NOTE: This approach has limitations (rate limits, captcha). For MVP/Hackathon it's okay.
-            // A better way is a Server Action with Service Role.
-            // Let's try to use the existing client but we need to be careful not to overwrite session?
-            // Actually `supabase.auth.signUp` *will* set the session on the client if successful.
-            // So we MUST use a separate client instance that doesn't persist session.
-            // But `createBrowserClient` might share state.
-            // Let's use a raw fetch to the Supabase Auth API if needed, or just accept that we might need to re-login?
-            // No, let's use a server action if Next.js! But I haven't set up server actions setup fully yet.
-            // I'll try the `supabase.auth.signUp` and see if it disrupts the session.
-            // Documentation says `signUp` signs the user in.
-
-            // Workaround: Call an API route that uses Service Role.
-            // I don't have Service Role in env.
-            // I'll just insert into `caretakers` and `profiles` and assume the user is created manually or via another mechanism for now?
-            // OR, I can prompt the user: "For this prototype, please create the user in Supabase Auth manually, then add details here."
-            // OR, I can use the `signUp` and then immediately `signOut` and re-login the admin? Too disruptive.
-
-            // Best Hackathon Fix: Just insert the DB records. The auth user "exists" conceptually. 
-            // I'll generate a fake user_id if I can't create real auth.
-            // Wait, `profiles` references `auth.users`. I can't insert fake UUID if foreign key constraint exists.
-            // I need a real user.
-
-            // Let's implement a simple API route `/api/create-user` that uses the `hooks` or `service` key if I had it.
-            // Since I don't, I will use `supabase.auth.signUp` but I will use a *fresh* `createClient` with a different storage key to avoid overwriting calling client's session.
-
-            const tempSupabase = createClient() // detailed config needed to isolate storage?
-            // Standard createClient uses generic storage.
-            // I will just use `fetch` to the Supabase Auth endpoint directly to avoid client state issues.
-            // POST https://<project>.supabase.co/auth/v1/signup
-
-            const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qkbstsilkczvzgxmhsnw.supabase.co'}/auth/v1/signup?apikey=${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_Wjp8Hq97ZcCylRtEbInDMA_9hJKfeIT'}`, {
+            // 2. Call API to create caretaker
+            const response = await fetch('/api/admin/create-caretaker', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: formData.email, password: formData.password })
+                body: JSON.stringify({
+                    email: formData.email.trim(),
+                    password: formData.password,
+                    name: formData.name.trim(),
+                    phone: formData.phone.trim(),
+                    organization_id: profile.organization_id
+                })
             })
 
-            const authData = await response.json()
-            if (!response.ok) throw new Error(authData.msg || authData.message || 'Failed to create user')
-
-            const userId = authData.user?.id || authData.id // adjustments for API response
-            if (!userId) throw new Error('No user ID returned')
-
-            // 3. Insert into Profiles
-            const { error: profileError } = await supabase.from('profiles').insert([
-                { id: userId, role: 'caretaker', organization_id: profile.organization_id, full_name: formData.name } // full_name added to schema
-            ])
-            if (profileError) {
-                // Ignore if profile already exists (trigger) but we didn't add trigger.
-                console.error('Profile creation error', profileError)
-            }
-
-            // 4. Insert into Caretakers
-            const { error: caretakerError } = await supabase.from('caretakers').insert([
-                { user_id: userId, organization_id: profile.organization_id, name: formData.name, phone: formData.phone }
-            ])
-            if (caretakerError) throw caretakerError
+            const result = await response.json()
+            if (!response.ok) throw new Error(result.error || 'Failed to create caretaker')
 
             setShowModal(false)
             fetchCaretakers()
             setFormData({ name: '', email: '', password: '', phone: '' })
+            alert('Caretaker created successfully')
         } catch (err: any) {
             console.error(err)
             alert(err.message || 'Failed to create caretaker')

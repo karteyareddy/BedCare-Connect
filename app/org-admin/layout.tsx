@@ -46,6 +46,10 @@ export default function OrgAdminLayout({
                             <FileText size={20} />
                             <span>Tasks</span>
                         </Link>
+                        <Link href="/org-admin/families" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors">
+                            <Users size={20} />
+                            <span>Families</span>
+                        </Link>
                         <Link href="#" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors">
                             <FileText size={20} />
                             <span>Reports</span>

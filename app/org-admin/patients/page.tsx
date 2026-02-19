@@ -77,39 +77,28 @@ export default function ManagePatientsPage() {
             const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
             if (!profile?.organization_id) throw new Error('No organization found')
 
-            // 1. Create Auth User (Similar workaround/hack as ViewCaretakers)
-            const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qkbstsilkczvzgxmhsnw.supabase.co'}/auth/v1/signup?apikey=${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_Wjp8Hq97ZcCylRtEbInDMA_9hJKfeIT'}`, {
+            // Call API to create patient
+            const response = await fetch('/api/admin/create-patient', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: formData.email, password: formData.password })
+                body: JSON.stringify({
+                    email: formData.email.trim(),
+                    password: formData.password,
+                    name: formData.name.trim(),
+                    organization_id: profile.organization_id,
+                    room_number: formData.room_number.trim(),
+                    condition: formData.condition.trim(),
+                    caretaker_id: formData.caretaker_id
+                })
             })
 
-            const authData = await response.json()
-            if (!response.ok) throw new Error(authData.msg || authData.message || 'Failed to create user')
-
-            const userId = authData.user?.id || authData.id
-
-            // 2. Insert into Profiles
-            await supabase.from('profiles').insert([
-                { id: userId, role: 'patient', organization_id: profile.organization_id, full_name: formData.name }
-            ])
-
-            // 3. Insert into Patients
-            const { error: patientError } = await supabase.from('patients').insert([
-                {
-                    user_id: userId,
-                    organization_id: profile.organization_id,
-                    name: formData.name,
-                    room_number: formData.room_number,
-                    condition: formData.condition,
-                    caretaker_id: formData.caretaker_id || null
-                }
-            ])
-            if (patientError) throw patientError
+            const result = await response.json()
+            if (!response.ok) throw new Error(result.error || 'Failed to create patient')
 
             setShowModal(false)
             fetchData()
             setFormData({ name: '', email: '', password: '', room_number: '', condition: '', caretaker_id: '' })
+            alert('Patient created successfully')
         } catch (err: any) {
             console.error(err)
             alert(err.message || 'Failed to create patient')

@@ -51,16 +51,28 @@ export default function CaretakerChatPage() {
         setLoading(true)
 
         try {
-            const res = await fetch('/api/gemini/chat', {
+            // Prepare context
+            let context = ''
+            if (selectedPatientId) {
+                const patient = patients.find(p => p.id === selectedPatientId)
+                if (patient) {
+                    context = `Patient Name: ${patient.name}. User is asking in the context of this patient.`
+                }
+            }
+
+            const res = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: userMsg.content, patientId: selectedPatientId })
+                body: JSON.stringify({
+                    messages: [...messages, userMsg],
+                    context
+                })
             })
 
             const data = await res.json()
 
-            if (data.reply) {
-                setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+            if (data.text) {
+                setMessages(prev => [...prev, { role: 'assistant', content: data.text }])
             } else {
                 setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }])
             }
@@ -100,8 +112,8 @@ export default function CaretakerChatPage() {
                 {messages.map((msg, idx) => (
                     <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${msg.role === 'user'
-                                ? 'bg-indigo-600 text-white rounded-br-none'
-                                : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
+                            ? 'bg-indigo-600 text-white rounded-br-none'
+                            : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
                             }`}>
                             <p className="text-sm shadow-black drop-shadow-sm">{msg.content}</p>
                         </div>

@@ -21,28 +21,11 @@ export default function FamilyDashboard() {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return
 
-            // In a real app, we need to link Family User -> Patient
-            // For this hackathon, let's assume Family User ID is linked to Patient via a 'family_id' column in patient? 
-            // or a 'families' table.
-            // Let's assume we store 'patient_id' in family user metadata for simplicity.
-            // OR, we query patients where 'family_email' matches?
+            // Get linked patient from profile
+            const { data: profile } = await supabase.from('profiles').select('linked_patient_id').eq('id', user.id).single()
 
-            // Let's assume we link via `profiles` -> `patient_id`? No, profile is 1:1.
-            // Let's add a quick hack: we fetch the FIRST patient in the same organization for now (demo mode)
-            // OR better: Assume the user IS the patient's family login.
-            // Let's fetch patients where organization_id matches (demo mode limits visibility).
-
-            // Actually, better: The PRD says "Create Family login per patient".
-            // We can store the patient_id in user_metadata when creating the family user.
-            // Since I didn't implement family creation logic, I'll fallback to:
-            // Fetching the patient with the same name as the family user (very hacky) OR just fetch all patients in Org if role is 'family' (but filtering by assigned).
-
-            // Let's assume for Demo that family user sees ALL patients in their org (or just one).
-            // I'll fetch the profile, get org_id, then get the first patient.
-            const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
-
-            if (profile?.organization_id) {
-                const { data: patientData } = await supabase.from('patients').select('*').eq('organization_id', profile.organization_id).limit(1).single()
+            if (profile?.linked_patient_id) {
+                const { data: patientData } = await supabase.from('patients').select('*').eq('id', profile.linked_patient_id).single()
                 setPatient(patientData)
 
                 if (patientData) {
@@ -54,6 +37,8 @@ export default function FamilyDashboard() {
 
                     setTasks(tasksData || [])
                 }
+            } else {
+                console.log('No linked patient found for this family account.')
             }
 
         } catch (error) {
