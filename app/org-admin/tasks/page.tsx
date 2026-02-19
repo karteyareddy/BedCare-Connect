@@ -34,34 +34,49 @@ export default function ManageTasksPage() {
             const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
 
             if (profile?.organization_id) {
-                // Fetch Tasks
-                const { data: tasksData, error: tasksError } = await supabase
-                    .from('tasks')
-                    .select(`
-                        *,
-                        caretakers (name),
-                        patients (name)
-                    `)
-                    .eq('organization_id', profile.organization_id)
-                    .order('created_at', { ascending: false })
+                // Fetch Data in Parallel
+                const [tasksResult, caretakersResult, patientsResult] = await Promise.allSettled([
+                    supabase
+                        .from('tasks')
+                        .select(`*, caretakers (name), patients (name)`)
+                        .eq('organization_id', profile.organization_id)
+                        .order('created_at', { ascending: false }),
+                    supabase
+                        .from('caretakers')
+                        .select('id, name')
+                        .eq('organization_id', profile.organization_id),
+                    supabase
+                        .from('patients')
+                        .select('id, name')
+                        .eq('organization_id', profile.organization_id)
+                ])
 
-                if (tasksError) throw tasksError
-                setTasks(tasksData || [])
+                // Handle Tasks
+                if (tasksResult.status === 'fulfilled') {
+                    if (tasksResult.value.error) {
+                        console.error('Tasks fetch error:', tasksResult.value.error)
+                    } else {
+                        setTasks(tasksResult.value.data || [])
+                    }
+                }
 
-                // Fetch Caretakers
-                const { data: caretakersData, error: caretakersFetchError } = await supabase
-                    .from('caretakers')
-                    .select('id, name')
-                    .eq('organization_id', profile.organization_id)
+                // Handle Caretakers
+                if (caretakersResult.status === 'fulfilled') {
+                    if (caretakersResult.value.error) {
+                        console.error('Caretakers fetch error:', caretakersResult.value.error)
+                    } else {
+                        setCaretakers(caretakersResult.value.data || [])
+                    }
+                }
 
-                setCaretakers(caretakersData || [])
-
-                // Fetch Patients
-                const { data: patientsData, error: patientsFetchError } = await supabase
-                    .from('patients')
-                    .select('id, name')
-                    .eq('organization_id', profile.organization_id)
-                setPatients(patientsData || [])
+                // Handle Patients
+                if (patientsResult.status === 'fulfilled') {
+                    if (patientsResult.value.error) {
+                        console.error('Patients fetch error:', patientsResult.value.error)
+                    } else {
+                        setPatients(patientsResult.value.data || [])
+                    }
+                }
             }
         } catch (error: any) {
             console.error('Error fetching data:', error)
