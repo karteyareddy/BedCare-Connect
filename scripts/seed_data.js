@@ -1,148 +1,99 @@
 const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
-const path = require('path');
 
-// Load env
-function loadEnv() {
-    const envPath = path.resolve(process.cwd(), '.env.local');
-    if (!fs.existsSync(envPath)) return {};
-    const content = fs.readFileSync(envPath, 'utf8');
-    const env = {};
-    content.split(/\r?\n/).forEach(line => {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) return;
-        const eqIdx = trimmed.indexOf('=');
-        if (eqIdx > 0) {
-            const key = trimmed.substring(0, eqIdx).trim();
-            let val = trimmed.substring(eqIdx + 1).trim();
-            if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-                val = val.substring(1, val.length - 1);
-            }
-            env[key] = val;
-        }
-    });
-    return env;
-}
+const supabaseUrl = 'https://qkbstsilkczvzgxmhsnw.supabase.co';
+const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrYnN0c2lsa2N6dnpneG1oc253Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTQxNDkxMywiZXhwIjoyMDg2OTkwOTEzfQ.L8VrQbtMKtl7KWmq4tpH048hICLwH_VT95NzqRhochE';
 
-const env = loadEnv();
-const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+        autoRefreshToken: false,
+        persistSession: false
+    }
+});
 
-if (!supabaseUrl || !serviceKey) {
-    console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY or URL in .env.local');
-    process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, serviceKey);
+const ORG_ID = '2aceabb5-b344-4664-af4f-4ebe8474b367';
 
 async function seed() {
-    console.log('🌱 Seeding Test Data...');
+    console.log('Starting seed...');
 
-    try {
-        // 1. Create Organization
-        console.log('Creating Organization...');
-        const { data: org, error: orgError } = await supabase
-            .from('organizations')
-            .insert([{ name: 'City General Hospital', owner_name: 'Dr. House', license_number: 'CGH-12345' }])
-            .select()
-            .single();
+    // 1. Create Caretaker
+    const caretakerEmail = `caretaker_${Date.now()}@test.com`;
+    const { data: cAuth, error: cAuthError } = await supabase.auth.admin.createUser({
+        email: caretakerEmail,
+        password: 'password123',
+        email_confirm: true,
+        user_metadata: { role: 'caretaker' }
+    });
 
-        if (orgError) throw orgError;
-        const orgId = org.id;
+    if (cAuthError) {
+        console.error('Error creating caretaker user:', cAuthError);
+        return;
+    }
+    console.log('Caretaker Auth created:', cAuth.user.id);
 
-        // Helper to create user
-        const createUser = async (email, password, role, name, extraData = {}) => {
-            console.log(`Creating ${role}: ${email}...`);
-            // 1. Create Auth User
-            const { data: { user }, error: authError } = await supabase.auth.admin.createUser({
-                email,
-                password,
-                email_confirm: true
-            });
+    // Profile
+    const { error: cProfileError } = await supabase.from('profiles').upsert({
+        id: cAuth.user.id,
+        organization_id: ORG_ID,
+        role: 'caretaker',
+        full_name: 'Seed Caretaker',
+        email: caretakerEmail
+    });
+    if (cProfileError) console.error('Error creating caretaker profile:', cProfileError);
 
-            if (authError) {
-                console.log(`   ⚠️ Auth User ${email} might already exist: ${authError.message}`);
-                // Try to get user if exists
-                // For simplified seeding, we might just fail or skip. 
-                // Let's assume we proceed to profile creation only if user creation succeeded OR we fetch the ID.
-                return null;
-            }
+    // Caretaker Record
+    const { data: caretakerData, error: cRecordError } = await supabase.from('caretakers').insert({
+        user_id: cAuth.user.id,
+        organization_id: ORG_ID,
+        name: 'Seed Caretaker',
+        phone: '555-0001'
+    }).select().single();
 
-            // 2. Create Profile
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .insert([{
-                    id: user.id,
-                    email,
-                    role,
-                    full_name: name,
-                    organization_id: role === 'super_admin' ? null : orgId
-                }]);
+    if (cRecordError) {
+        console.error('Error creating caretaker record:', cRecordError);
+        return;
+    }
+    console.log('Caretaker Record created:', caretakerData.id);
 
-            if (profileError) console.error(`   ❌ Profile Error: ${profileError.message}`);
 
-            // 3. Role specific tables
-            if (role === 'caretaker') {
-                const { error: ctError } = await supabase.from('caretakers').insert([{
-                    user_id: user.id,
-                    organization_id: orgId,
-                    name: name,
-                    phone: '555-0101',
-                    specialization: 'Geriatrics'
-                }]);
-                if (ctError) console.error(`   ❌ Caretaker Table Error: ${ctError.message}`);
-            }
+    // 2. Create Patient
+    const patientEmail = `patient_${Date.now()}@test.com`;
+    const { data: pAuth, error: pAuthError } = await supabase.auth.admin.createUser({
+        email: patientEmail,
+        password: 'password123',
+        email_confirm: true,
+        user_metadata: { role: 'patient' }
+    });
 
-            return user.id;
-        };
+    if (pAuthError) {
+        console.error('Error creating patient user:', pAuthError);
+        return;
+    }
+    console.log('Patient Auth created:', pAuth.user.id);
 
-        // 2. Create Users
-        await createUser('admin@bedcare.com', 'password123', 'super_admin', 'Super Admin User');
-        await createUser('org@hospital.com', 'password123', 'org_admin', 'Hospital Admin');
-        const caretakerId = await createUser('nurse@hospital.com', 'password123', 'caretaker', 'Nurse Jackie');
+    // Profile
+    const { error: pProfileError } = await supabase.from('profiles').upsert({
+        id: pAuth.user.id,
+        organization_id: ORG_ID,
+        role: 'patient',
+        full_name: 'Seed Patient',
+        email: patientEmail
+    });
+    if (pProfileError) console.error('Error creating patient profile:', pProfileError);
 
-        // Need to get the caretaker UUID from the `caretakers` table, not `auth.users`
-        let caretakerRecordId = null;
-        if (caretakerId) { // if new user created
-            const { data: ct } = await supabase.from('caretakers').select('id').eq('user_id', caretakerId).single();
-            caretakerRecordId = ct?.id;
-        }
+    // Patient Record
+    const { error: pRecordError } = await supabase.from('patients').insert({
+        user_id: pAuth.user.id,
+        organization_id: ORG_ID,
+        name: 'Seed Patient',
+        room_number: '101',
+        condition: 'Stable',
+        caretaker_id: caretakerData.id
+    });
 
-        // 3. Create Patient (Linked to Caretaker)
-        // We create a profile for patient too if they have login
-        const patientUserId = await createUser('patient@hospital.com', 'password123', 'patient', 'John Doe');
-
-        console.log('Creating Patient Record...');
-        const { data: patient, error: patError } = await supabase.from('patients').insert([{
-            user_id: patientUserId, // optional
-            organization_id: orgId,
-            caretaker_id: caretakerRecordId,
-            name: 'John Doe',
-            room_number: '101-A',
-            condition: 'Recovering from Surgery',
-            age: 72,
-            gender: 'Male',
-            admission_date: new Date()
-        }]).select().single();
-
-        if (patError) throw patError;
-
-        // 4. Create Family (Linked to Patient)
-        // In our dashboard code we "hacked" linking via organization match. 
-        // Real app would link properly. 
-        await createUser('family@home.com', 'password123', 'family', 'Jane Doe (Daughter)');
-
-        // 5. Create some Tasks
-        console.log('Creating Tasks...');
-        await supabase.from('tasks').insert([
-            { patient_id: patient.id, caretaker_id: caretakerRecordId, title: 'Morning Meds', description: 'Administer 500mg Paracetamol', status: 'pending', due_date: new Date() },
-            { patient_id: patient.id, caretaker_id: caretakerRecordId, title: 'Check Vitals', description: 'Measure BP and Heart Rate', status: 'completed', proof_url: 'https://placehold.co/600x400', due_date: new Date(Date.now() - 86400000) }
-        ]);
-
-        console.log('✅ Seeding Complete!');
-
-    } catch (err) {
-        console.error('❌ Seeding Failed:', err);
+    if (pRecordError) {
+        console.error('Error creating patient record:', pRecordError);
+    } else {
+        console.log('Patient Record created successfully linked to caretaker.');
     }
 }
 

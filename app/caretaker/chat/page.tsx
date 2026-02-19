@@ -2,46 +2,149 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabaseClient'
-import { Send, Bot, User, Loader2, AlertTriangle } from 'lucide-react'
+import { Send, Bot, User, Loader2, AlertTriangle, Users } from 'lucide-react'
 
 export default function CaretakerChatPage() {
+    // Shared State
+    const [loading, setLoading] = useState(false)
+    const [userId, setUserId] = useState<string | null>(null)
+    const [caretakerId, setCaretakerId] = useState<string | null>(null)
+    const messagesEndRef = useRef<HTMLDivElement>(null)
+    const [activeTab, setActiveTab] = useState<'ai' | 'family' | 'patient'>('ai')
+
+    // AI Chat State
     const [messages, setMessages] = useState<any[]>([
         { role: 'assistant', content: 'Hello! I am your BedCare AI assistant. Select a patient to get context-aware help, or just ask a general question.' }
     ])
     const [input, setInput] = useState('')
-    const [loading, setLoading] = useState(false)
+
+    // Patient Data (Used for AI Context & Patient Chat)
     const [patients, setPatients] = useState<any[]>([])
     const [selectedPatientId, setSelectedPatientId] = useState('')
-    const messagesEndRef = useRef<HTMLDivElement>(null)
+    const [patientMessages, setPatientMessages] = useState<any[]>([])
+    const [patientInput, setPatientInput] = useState('')
+
+    // Family Chat State
+    const [familyMembers, setFamilyMembers] = useState<any[]>([])
+    const [selectedFamilyId, setSelectedFamilyId] = useState('')
+    const [familyMessages, setFamilyMessages] = useState<any[]>([])
+    const [familyInput, setFamilyInput] = useState('')
 
     const supabase = createClient()
 
+    // 1. Initial Load
     useEffect(() => {
-        fetchPatients()
+        const init = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return
+            setUserId(user.id)
+
+            const { data: caretaker } = await supabase.from('caretakers').select('id, organization_id').eq('user_id', user.id).single()
+            if (caretaker) {
+                setCaretakerId(caretaker.id)
+                // Fetch assigned patients
+                const { data: assigned } = await supabase.from('patients').select('id, name, user_id').eq('caretaker_id', caretaker.id)
+                setPatients(assigned || [])
+            }
+        }
+        init()
     }, [])
 
+    // 2. Fetch Family Members when tab active
     useEffect(() => {
-        scrollToBottom()
-    }, [messages])
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-
-    const fetchPatients = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-        const { data: caretaker } = await supabase.from('caretakers').select('id, organization_id').eq('user_id', user.id).single()
-        if (caretaker) {
-            const { data } = await supabase.from('patients').select('id, name').eq('organization_id', caretaker.organization_id) // Fetch all in org or just assigned?
-            // PRD says "Caretaker selects patient". Usually assigned.
-            // Let's allow selecting from assigned for now.
-            const { data: assigned } = await supabase.from('patients').select('id, name').eq('caretaker_id', caretaker.id)
-            setPatients(assigned || [])
+        if (activeTab === 'family' && patients.length > 0) {
+            const patientIds = patients.map(p => p.id)
+            const fetchFamilies = async () => {
+                const { data: families } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, linked_patient_id, patients:linked_patient_id(name)')
+                    .in('linked_patient_id', patientIds)
+                    .eq('role', 'family')
+                setFamilyMembers(families || [])
+            }
+            fetchFamilies()
         }
-    }
+    }, [activeTab, patients])
 
-    const handleSend = async (e: React.FormEvent) => {
+    // 3. Subscriptions & History Loading
+
+    // Family Chat
+    useEffect(() => {
+        if (!selectedFamilyId || !userId) return
+
+        // Load History
+        const loadFamilyHistory = async () => {
+            const { data } = await supabase
+                .from('chats')
+                .select('*')
+                .or(`and(initiator_id.eq.${userId},recipient_id.eq.${selectedFamilyId}),and(initiator_id.eq.${selectedFamilyId},recipient_id.eq.${userId})`)
+                .order('created_at', { ascending: true })
+            setFamilyMessages(data || [])
+        }
+        loadFamilyHistory()
+
+        // Subscribe
+        const channel = supabase
+            .channel(`public:chats:family:${selectedFamilyId}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chats' }, (payload) => {
+                const newMsg = payload.new
+                if (newMsg.initiator_id === selectedFamilyId || newMsg.recipient_id === selectedFamilyId) {
+                    setFamilyMessages(prev => {
+                        if (prev.find(m => m.id === newMsg.id)) return prev
+                        return [...prev, newMsg]
+                    })
+                }
+            })
+            .subscribe()
+
+        return () => { supabase.removeChannel(channel) }
+    }, [selectedFamilyId, userId])
+
+    // Patient Chat
+    useEffect(() => {
+        if (!selectedPatientId || !userId || activeTab !== 'patient') return
+
+        const patient = patients.find(p => p.id === selectedPatientId)
+        if (!patient?.user_id) return
+
+        // Load History
+        const loadPatientHistory = async () => {
+            const { data } = await supabase
+                .from('chats')
+                .select('*')
+                .or(`and(initiator_id.eq.${userId},recipient_id.eq.${patient.user_id}),and(initiator_id.eq.${patient.user_id},recipient_id.eq.${userId})`)
+                .order('created_at', { ascending: true })
+            setPatientMessages(data || [])
+        }
+        loadPatientHistory()
+
+        // Subscribe
+        const channel = supabase
+            .channel(`public:chats:patient:${patient.user_id}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chats' }, (payload) => {
+                const newMsg = payload.new
+                if (newMsg.initiator_id === patient.user_id || newMsg.recipient_id === patient.user_id) {
+                    setPatientMessages(prev => {
+                        if (prev.find(m => m.id === newMsg.id)) return prev
+                        return [...prev, newMsg]
+                    })
+                }
+            })
+            .subscribe()
+
+        return () => { supabase.removeChannel(channel) }
+
+    }, [selectedPatientId, userId, activeTab, patients])
+
+
+    // Scroll handling
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, [messages, familyMessages, patientMessages, activeTab])
+
+
+    // Handlers
+    const handleSendAI = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!input.trim()) return
 
@@ -51,7 +154,6 @@ export default function CaretakerChatPage() {
         setLoading(true)
 
         try {
-            // Prepare context
             let context = ''
             if (selectedPatientId) {
                 const patient = patients.find(p => p.id === selectedPatientId)
@@ -70,91 +172,17 @@ export default function CaretakerChatPage() {
             })
 
             const data = await res.json()
-
             if (data.text) {
                 setMessages(prev => [...prev, { role: 'assistant', content: data.text }])
             } else {
-                setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }])
+                setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error.' }])
             }
         } catch (error) {
             console.error('Chat error:', error)
-            setMessages(prev => [...prev, { role: 'assistant', content: 'Network error. Please check your connection.' }])
+            setMessages(prev => [...prev, { role: 'assistant', content: 'Network error.' }])
         } finally {
             setLoading(false)
         }
-    }
-
-    const [activeTab, setActiveTab] = useState<'ai' | 'family'>('ai')
-    const [familyMembers, setFamilyMembers] = useState<any[]>([])
-    const [selectedFamilyId, setSelectedFamilyId] = useState('')
-    const [familyMessages, setFamilyMessages] = useState<any[]>([])
-    const [familyInput, setFamilyInput] = useState('')
-    const [caretakerId, setCaretakerId] = useState<string | null>(null)
-    const [userId, setUserId] = useState<string | null>(null)
-
-    useEffect(() => {
-        if (activeTab === 'family') {
-            fetchFamilyMembers()
-        }
-    }, [activeTab])
-
-    useEffect(() => {
-        if (selectedFamilyId) {
-            fetchFamilyHistory(selectedFamilyId)
-
-            const channel = supabase
-                .channel(`public:chats:${selectedFamilyId}`)
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chats' }, (payload) => {
-                    const newMsg = payload.new
-                    if (newMsg.initiator_id === selectedFamilyId || newMsg.recipient_id === selectedFamilyId) {
-                        setFamilyMessages(prev => {
-                            if (prev.find(m => m.id === newMsg.id)) return prev
-                            return [...prev, newMsg]
-                        })
-                    }
-                })
-                .subscribe()
-
-            return () => {
-                supabase.removeChannel(channel)
-            }
-        }
-    }, [selectedFamilyId])
-
-    const fetchFamilyMembers = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-        setUserId(user.id)
-
-        const { data: caretaker } = await supabase.from('caretakers').select('id, organization_id').eq('user_id', user.id).single()
-        if (caretaker) {
-            setCaretakerId(caretaker.id)
-            // Fetch patients assigned to this caretaker
-            const { data: assignedPatients } = await supabase.from('patients').select('id').eq('caretaker_id', caretaker.id)
-
-            if (assignedPatients && assignedPatients.length > 0) {
-                const patientIds = assignedPatients.map(p => p.id)
-                // Fetch profiles (families) linked to these patients
-                const { data: families } = await supabase
-                    .from('profiles')
-                    .select('id, full_name, linked_patient_id, patients:linked_patient_id(name)')
-                    .in('linked_patient_id', patientIds)
-                    .eq('role', 'family')
-
-                setFamilyMembers(families || [])
-            }
-        }
-    }
-
-    const fetchFamilyHistory = async (familyId: string) => {
-        if (!userId) return
-        const { data } = await supabase
-            .from('chats')
-            .select('*')
-            .or(`and(initiator_id.eq.${userId},recipient_id.eq.${familyId}),and(initiator_id.eq.${familyId},recipient_id.eq.${userId})`)
-            .order('created_at', { ascending: true })
-
-        setFamilyMessages(data || [])
     }
 
     const handleSendFamily = async (e: React.FormEvent) => {
@@ -164,59 +192,74 @@ export default function CaretakerChatPage() {
         const text = familyInput.trim()
         setFamilyInput('')
 
-        // Optimistic update
-        const tempId = Date.now().toString() // Temporary ID
+        // Optimistic
+        const tempId = Date.now().toString()
         const optimisticMsg = {
-            id: tempId,
-            initiator_id: userId,
-            recipient_id: selectedFamilyId,
-            message: text,
-            created_at: new Date().toISOString()
+            id: tempId, initiator_id: userId, recipient_id: selectedFamilyId,
+            message: text, created_at: new Date().toISOString()
         }
-
-        // Add immediately
         setFamilyMessages(prev => [...prev, optimisticMsg])
 
-        const { data, error } = await supabase.from('chats').insert([
-            {
-                initiator_id: userId,
-                recipient_id: selectedFamilyId,
-                message: text
-            }
-        ]).select().single()
+        const { data, error } = await supabase.from('chats').insert([{
+            initiator_id: userId, recipient_id: selectedFamilyId, message: text
+        }]).select().single()
 
         if (error) {
-            console.error('Error sending message:', error)
-            alert('Failed to send')
-            // Rollback if needed, or just let user know. 
-            // Simple rollback: remove the optimistic message
+            console.error('Error sending:', error)
             setFamilyMessages(prev => prev.filter(m => m.id !== tempId))
         } else if (data) {
-            // Replace optimistic with real one (mostly for ID sync)
-            setFamilyMessages(prev => {
-                // Check if the real message (data.id) is already in the list (from subscription)
-                if (prev.find(m => m.id === data.id)) {
-                    // Subscription beat us. Remove optimistic one.
-                    return prev.filter(m => m.id !== tempId)
-                }
-                // Subscription hasn't arrived or we beat it. Update optimistic to real.
-                return prev.map(m => m.id === tempId ? data : m)
-            })
+            setFamilyMessages(prev => prev.map(m => m.id === tempId ? data : m))
+        }
+    }
+
+    const handleSendPatient = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!patientInput.trim() || !selectedPatientId || !userId) return
+
+        const patient = patients.find(p => p.id === selectedPatientId)
+        if (!patient?.user_id) return
+
+        const text = patientInput.trim()
+        setPatientInput('')
+
+        // Optimistic
+        const tempId = Date.now().toString()
+        const optimisticMsg = {
+            id: tempId, initiator_id: userId, recipient_id: patient.user_id,
+            message: text, created_at: new Date().toISOString()
+        }
+        setPatientMessages(prev => [...prev, optimisticMsg])
+
+        const { data, error } = await supabase.from('chats').insert([{
+            initiator_id: userId, recipient_id: patient.user_id, message: text
+        }]).select().single()
+
+        if (error) {
+            console.error('Error sending:', error)
+            setPatientMessages(prev => prev.filter(m => m.id !== tempId))
+        } else if (data) {
+            setPatientMessages(prev => prev.map(m => m.id === tempId ? data : m))
         }
     }
 
     return (
         <div className="flex flex-col h-full">
             <div className="bg-white p-4 shadow-sm z-10">
-                <div className="flex gap-4 mb-4 border-b">
+                <div className="flex gap-4 mb-4 border-b overflow-x-auto">
                     <button
-                        className={`pb-2 px-4 font-medium ${activeTab === 'ai' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
+                        className={`pb-2 px-4 font-medium whitespace-nowrap ${activeTab === 'ai' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
                         onClick={() => setActiveTab('ai')}
                     >
                         AI Assistant
                     </button>
                     <button
-                        className={`pb-2 px-4 font-medium ${activeTab === 'family' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
+                        className={`pb-2 px-4 font-medium whitespace-nowrap ${activeTab === 'patient' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
+                        onClick={() => setActiveTab('patient')}
+                    >
+                        Patient Chat
+                    </button>
+                    <button
+                        className={`pb-2 px-4 font-medium whitespace-nowrap ${activeTab === 'family' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}
                         onClick={() => setActiveTab('family')}
                     >
                         Family Chat
@@ -247,6 +290,22 @@ export default function CaretakerChatPage() {
                     </>
                 )}
 
+                {activeTab === 'patient' && (
+                    <>
+                        <h1 className="text-xl font-bold text-gray-800 mb-2">Patient Chat</h1>
+                        <select
+                            className="w-full p-2 border rounded-lg text-sm bg-gray-50"
+                            value={selectedPatientId}
+                            onChange={(e) => setSelectedPatientId(e.target.value)}
+                        >
+                            <option value="">Select Patient to Chat...</option>
+                            {patients.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                        </select>
+                    </>
+                )}
+
                 {activeTab === 'family' && (
                     <>
                         <h1 className="text-xl font-bold text-gray-800 mb-2">Family Chat</h1>
@@ -265,7 +324,7 @@ export default function CaretakerChatPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                {activeTab === 'ai' ? (
+                {activeTab === 'ai' && (
                     <>
                         {messages.map((msg, idx) => (
                             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -285,7 +344,33 @@ export default function CaretakerChatPage() {
                             </div>
                         )}
                     </>
-                ) : (
+                )}
+
+                {activeTab === 'patient' && (
+                    <>
+                        {patientMessages.map((msg) => {
+                            const isMe = msg.initiator_id === userId
+                            return (
+                                <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[80%] rounded-2xl p-3 shadow-sm ${isMe
+                                        ? 'bg-indigo-600 text-white rounded-br-none'
+                                        : 'bg-white text-gray-800 rounded-bl-none border'
+                                        }`}>
+                                        <p className="text-sm">{msg.message}</p>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                        {patientMessages.length === 0 && selectedPatientId && (
+                            <div className="text-center text-gray-500 mt-10">No messages yet. Say hello to your patient!</div>
+                        )}
+                        {!selectedPatientId && (
+                            <div className="text-center text-gray-500 mt-10">Select a patient to chat.</div>
+                        )}
+                    </>
+                )}
+
+                {activeTab === 'family' && (
                     <>
                         {familyMessages.map((msg) => {
                             const isMe = msg.initiator_id === userId
@@ -312,8 +397,8 @@ export default function CaretakerChatPage() {
             </div>
 
             <div className="p-4 bg-white border-t pb-24">
-                {activeTab === 'ai' ? (
-                    <form onSubmit={handleSend} className="flex gap-2">
+                {activeTab === 'ai' && (
+                    <form onSubmit={handleSendAI} className="flex gap-2">
                         <input
                             type="text"
                             className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
@@ -329,7 +414,29 @@ export default function CaretakerChatPage() {
                             <Send size={20} />
                         </button>
                     </form>
-                ) : (
+                )}
+
+                {activeTab === 'patient' && (
+                    <form onSubmit={handleSendPatient} className="flex gap-2">
+                        <input
+                            type="text"
+                            className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
+                            placeholder="Message patient..."
+                            value={patientInput}
+                            onChange={(e) => setPatientInput(e.target.value)}
+                            disabled={!selectedPatientId}
+                        />
+                        <button
+                            type="submit"
+                            disabled={!patientInput.trim() || !selectedPatientId}
+                            className="bg-indigo-600 text-white p-3 rounded-full hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                        >
+                            <Send size={20} />
+                        </button>
+                    </form>
+                )}
+
+                {activeTab === 'family' && (
                     <form onSubmit={handleSendFamily} className="flex gap-2">
                         <input
                             type="text"

@@ -10,6 +10,7 @@ export default function PatientDashboard() {
     const [patient, setPatient] = useState<any>(null)
     const [caretaker, setCaretaker] = useState<any>(null)
     const [tasks, setTasks] = useState<any[]>([])
+    const [familyMembers, setFamilyMembers] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [emergencyLoading, setEmergencyLoading] = useState(false)
 
@@ -37,6 +38,15 @@ export default function PatientDashboard() {
                     const { data: caretakerData } = await supabase.from('caretakers').select('*').eq('id', patientData.caretaker_id).single()
                     setCaretaker(caretakerData)
                 }
+
+                // Fetch Family Members linked to this patient
+                const { data: familyData } = await supabase
+                    .from('profiles')
+                    .select('id, user_id, full_name')
+                    .eq('linked_patient_id', patientData.id)
+                    .eq('role', 'family')
+
+                setFamilyMembers(familyData || [])
 
                 // Fetch Tasks (Today)
                 const { data: tasksData } = await supabase
@@ -69,12 +79,34 @@ export default function PatientDashboard() {
             }
 
             if (online) {
+                // 1. Create Alert
                 const { error } = await supabase.from('alerts').insert([alertData])
                 if (error) throw error
-                alert('Emergency Alert Sent! Help is on the way.')
+
+                // 2. Send Chat to Caretaker
+                const { data: { user } } = await supabase.auth.getUser()
+                if (caretaker && user) {
+                    await supabase.from('chats').insert([{
+                        initiator_id: user.id,
+                        recipient_id: caretaker.user_id, // Caretaker's auth user_id
+                        message: '🚨 EMERGENCY ALERT! I need help immediately!'
+                    }])
+                }
+
+                // 3. Send Chat to Family
+                if (familyMembers.length > 0 && user) {
+                    const familyChats = familyMembers.map(member => ({
+                        initiator_id: user.id, // Patient
+                        recipient_id: member.id, // Family Profile ID / User ID
+                        message: '🚨 EMERGENCY ALERT! I need help immediately!'
+                    }))
+
+                    await supabase.from('chats').insert(familyChats)
+                }
+
+                alert('Emergency Alert Sent! Caretaker and Family have been notified via Chat and System Alert.')
             } else {
                 // Offline - local storage + sync
-                // For hackathon, just Add to Queue
                 await addToSyncQueue('alerts', 'POST', alertData)
                 alert('You are offline. Emergency Alert Queued! It will be sent as soon as connection is restored.')
             }

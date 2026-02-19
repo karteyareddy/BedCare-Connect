@@ -34,7 +34,6 @@ export default function ManageTasksPage() {
             const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
 
             if (profile?.organization_id) {
-                console.log('Org ID:', profile.organization_id)
                 // Fetch Tasks
                 const { data: tasksData, error: tasksError } = await supabase
                     .from('tasks')
@@ -55,7 +54,6 @@ export default function ManageTasksPage() {
                     .select('id, name')
                     .eq('organization_id', profile.organization_id)
 
-                console.log('Caretakers:', caretakersData, caretakersFetchError)
                 setCaretakers(caretakersData || [])
 
                 // Fetch Patients
@@ -63,13 +61,14 @@ export default function ManageTasksPage() {
                     .from('patients')
                     .select('id, name')
                     .eq('organization_id', profile.organization_id)
-                console.log('Patients:', patientsData, patientsFetchError)
                 setPatients(patientsData || [])
-            } else {
-                console.log('No org id found for profile', profile)
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching data:', error)
+            console.error('Error details:', JSON.stringify(error, null, 2))
+            if (error.message) console.error('Error message:', error.message)
+            if (error.details) console.error('Error details prop:', error.details)
+            if (error.hint) console.error('Error hint:', error.hint)
         } finally {
             setLoading(false)
         }
@@ -121,6 +120,8 @@ export default function ManageTasksPage() {
                 </button>
             </div>
 
+
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {tasks.map(task => (
                     <div key={task.id} className="bg-white p-4 rounded-xl shadow border border-gray-100 flex flex-col">
@@ -160,21 +161,21 @@ export default function ManageTasksPage() {
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-                        <h2 className="text-xl font-bold mb-4">Assign New Task</h2>
+                        <h2 className="text-xl font-bold mb-4 text-black">Assign New Task</h2>
                         <form onSubmit={handleCreate} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Task Title</label>
-                                <input type="text" required className="mt-1 block w-full rounded-md border-gray-300 border p-2"
+                                <label className="block text-sm font-bold text-gray-900">Task Title</label>
+                                <input type="text" required className="mt-1 block w-full rounded-md border-gray-400 border p-2 text-black"
                                     value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Description</label>
-                                <textarea className="mt-1 block w-full rounded-md border-gray-300 border p-2" rows={3}
+                                <label className="block text-sm font-bold text-gray-900">Description</label>
+                                <textarea className="mt-1 block w-full rounded-md border-gray-400 border p-2 text-black" rows={3}
                                     value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Assign To (Caretaker)</label>
-                                <select className="mt-1 block w-full rounded-md border-gray-300 border p-2"
+                                <label className="block text-sm font-bold text-gray-900">Assign To (Caretaker)</label>
+                                <select className="mt-1 block w-full rounded-md border-gray-400 border p-2 text-black"
                                     value={formData.caretaker_id} onChange={e => setFormData({ ...formData, caretaker_id: e.target.value })}>
                                     <option value="">Select Caretaker</option>
                                     {caretakers.map(c => (
@@ -183,8 +184,8 @@ export default function ManageTasksPage() {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Related Patient (Optional)</label>
-                                <select className="mt-1 block w-full rounded-md border-gray-300 border p-2"
+                                <label className="block text-sm font-bold text-gray-900">Related Patient (Optional)</label>
+                                <select className="mt-1 block w-full rounded-md border-gray-400 border p-2 text-black"
                                     value={formData.patient_id} onChange={e => setFormData({ ...formData, patient_id: e.target.value })}>
                                     <option value="">Select Patient</option>
                                     {patients.map(p => (
@@ -193,8 +194,8 @@ export default function ManageTasksPage() {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Due Date</label>
-                                <input type="date" className="mt-1 block w-full rounded-md border-gray-300 border p-2"
+                                <label className="block text-sm font-bold text-gray-900">Due Date</label>
+                                <input type="date" className="mt-1 block w-full rounded-md border-gray-400 border p-2 text-black"
                                     value={formData.due_date} onChange={e => setFormData({ ...formData, due_date: e.target.value })} />
                             </div>
 
