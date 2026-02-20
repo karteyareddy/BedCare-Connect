@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabaseClient'
-import { Send, Bot, User, Loader2, AlertTriangle, Users } from 'lucide-react'
+import { Send, Bot, User, Loader2, AlertTriangle, Users, Mic } from 'lucide-react'
 import { motion } from 'framer-motion'
+import VoiceRecorder from '@/components/VoiceRecorder'
 
 export default function CaretakerChatPage() {
     // Shared State
@@ -163,6 +164,34 @@ export default function CaretakerChatPage() {
         } finally {
             setLoading(false)
         }
+    }
+
+    const VOICE_PREFIX = '[VOICE]:'
+    const isVoice = (msg: string) => msg?.startsWith(VOICE_PREFIX)
+    const getVoiceUrl = (msg: string) => msg?.replace(VOICE_PREFIX, '')
+
+    const handleSendFamilyVoice = async (audioBase64: string) => {
+        if (!selectedFamilyId || !userId) return
+        try {
+            await supabase.from('chats').insert([{
+                initiator_id: userId,
+                recipient_id: selectedFamilyId,
+                message: `${VOICE_PREFIX}${audioBase64}`
+            }])
+        } catch (err) { console.error('Voice error:', err) }
+    }
+
+    const handleSendPatientVoice = async (audioBase64: string) => {
+        if (!selectedPatientId || !userId) return
+        const patient = patients.find(p => p.id === selectedPatientId)
+        if (!patient?.user_id) return
+        try {
+            await supabase.from('chats').insert([{
+                initiator_id: userId,
+                recipient_id: patient.user_id,
+                message: `${VOICE_PREFIX}${audioBase64}`
+            }])
+        } catch (err) { console.error('Voice error:', err) }
     }
 
     const handleSendFamily = async (e: React.FormEvent) => {
@@ -344,11 +373,18 @@ export default function CaretakerChatPage() {
                                     key={msg.id || idx}
                                     className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                                 >
-                                    <div className={`max-w-[80%] rounded-2xl p-3 shadow-sm ${isMe
+                                    <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 shadow-sm ${isMe
                                         ? 'bg-indigo-600 text-white rounded-br-none'
-                                        : 'bg-white text-gray-800 rounded-bl-none border'
+                                        : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
                                         }`}>
-                                        <p className="text-sm">{msg.message}</p>
+                                        {isVoice(msg.message) ? (
+                                            <div className="flex items-center gap-2">
+                                                <Mic size={14} className="opacity-60" />
+                                                <audio src={getVoiceUrl(msg.message)} controls className="h-7 max-w-[180px]" />
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm">{msg.message}</p>
+                                        )}
                                     </div>
                                 </motion.div>
                             )
@@ -374,11 +410,18 @@ export default function CaretakerChatPage() {
                                     key={msg.id || idx}
                                     className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                                 >
-                                    <div className={`max-w-[80%] rounded-2xl p-3 shadow-sm ${isMe
+                                    <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 shadow-sm ${isMe
                                         ? 'bg-indigo-600 text-white rounded-br-none'
-                                        : 'bg-white text-gray-800 rounded-bl-none border'
+                                        : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
                                         }`}>
-                                        <p className="text-sm">{msg.message}</p>
+                                        {isVoice(msg.message) ? (
+                                            <div className="flex items-center gap-2">
+                                                <Mic size={14} className="opacity-60" />
+                                                <audio src={getVoiceUrl(msg.message)} controls className="h-7 max-w-[180px]" />
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm">{msg.message}</p>
+                                        )}
                                     </div>
                                 </motion.div>
                             )
@@ -415,10 +458,11 @@ export default function CaretakerChatPage() {
                 )}
 
                 {activeTab === 'patient' && (
-                    <form onSubmit={handleSendPatient} className="flex gap-2">
+                    <form onSubmit={handleSendPatient} className="flex gap-2 items-center">
+                        <VoiceRecorder onSendVoice={handleSendPatientVoice} disabled={!selectedPatientId} />
                         <input
                             type="text"
-                            className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
+                            className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 text-sm"
                             placeholder="Message patient..."
                             value={patientInput}
                             onChange={(e) => setPatientInput(e.target.value)}
@@ -427,18 +471,19 @@ export default function CaretakerChatPage() {
                         <button
                             type="submit"
                             disabled={!patientInput.trim() || !selectedPatientId}
-                            className="bg-indigo-600 text-white p-3 rounded-full hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                            className="w-11 h-11 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 disabled:opacity-50 transition-colors flex-shrink-0"
                         >
-                            <Send size={20} />
+                            <Send size={18} />
                         </button>
                     </form>
                 )}
 
                 {activeTab === 'family' && (
-                    <form onSubmit={handleSendFamily} className="flex gap-2">
+                    <form onSubmit={handleSendFamily} className="flex gap-2 items-center">
+                        <VoiceRecorder onSendVoice={handleSendFamilyVoice} disabled={!selectedFamilyId} />
                         <input
                             type="text"
-                            className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
+                            className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 text-sm"
                             placeholder="Message family..."
                             value={familyInput}
                             onChange={(e) => setFamilyInput(e.target.value)}
@@ -447,9 +492,9 @@ export default function CaretakerChatPage() {
                         <button
                             type="submit"
                             disabled={!familyInput.trim() || !selectedFamilyId}
-                            className="bg-indigo-600 text-white p-3 rounded-full hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                            className="w-11 h-11 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 disabled:opacity-50 transition-colors flex-shrink-0"
                         >
-                            <Send size={20} />
+                            <Send size={18} />
                         </button>
                     </form>
                 )}

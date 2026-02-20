@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabaseClient'
-import { Send, User } from 'lucide-react'
+import { Send, User, Mic } from 'lucide-react'
+import VoiceRecorder from '@/components/VoiceRecorder'
 
 export default function FamilyChatPage() {
     const [messages, setMessages] = useState<any[]>([])
@@ -86,6 +87,25 @@ export default function FamilyChatPage() {
         }
     }
 
+    const VOICE_PREFIX = '[VOICE]:'
+    const isVoice = (msg: string) => msg?.startsWith(VOICE_PREFIX)
+    const getVoiceUrl = (msg: string) => msg?.replace(VOICE_PREFIX, '')
+
+    const handleSendVoice = async (audioBase64: string) => {
+        if (!userId) return
+        let recipientId = null
+        if (activeTab === 'caretaker' && caretaker) recipientId = caretaker.user_id
+        if (activeTab === 'patient' && patient) recipientId = patient.user_id
+        if (!recipientId) return
+        try {
+            await supabase.from('chats').insert([{
+                initiator_id: userId,
+                recipient_id: recipientId,
+                message: `${VOICE_PREFIX}${audioBase64}`
+            }])
+        } catch (err) { console.error('Voice send error:', err) }
+    }
+
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!input.trim() || !userId) return
@@ -129,8 +149,8 @@ export default function FamilyChatPage() {
                 <button
                     onClick={() => setActiveTab('caretaker')}
                     className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${activeTab === 'caretaker'
-                            ? 'bg-indigo-600 text-white shadow-md'
-                            : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
                         }`}
                 >
                     Caretaker Chat
@@ -138,8 +158,8 @@ export default function FamilyChatPage() {
                 <button
                     onClick={() => setActiveTab('patient')}
                     className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${activeTab === 'patient'
-                            ? 'bg-blue-600 text-white shadow-md'
-                            : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
                         }`}
                 >
                     Patient Chat
@@ -167,11 +187,18 @@ export default function FamilyChatPage() {
                     const isMe = msg.initiator_id === userId
                     return (
                         <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[80%] rounded-2xl p-3 shadow-sm ${isMe
+                            <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 shadow-sm ${isMe
                                 ? (activeTab === 'caretaker' ? 'bg-indigo-600' : 'bg-blue-600') + ' text-white rounded-br-none'
-                                : 'bg-white text-gray-800 rounded-bl-none border'
+                                : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
                                 }`}>
-                                <p className="text-sm">{msg.message}</p>
+                                {isVoice(msg.message) ? (
+                                    <div className="flex items-center gap-2">
+                                        <Mic size={14} className="opacity-60" />
+                                        <audio src={getVoiceUrl(msg.message)} controls className="h-7 max-w-[180px]" />
+                                    </div>
+                                ) : (
+                                    <p className="text-sm">{msg.message}</p>
+                                )}
                             </div>
                         </div>
                     )
@@ -182,10 +209,11 @@ export default function FamilyChatPage() {
             </div>
 
             <div className="mt-4 pt-2">
-                <form onSubmit={handleSend} className="flex gap-2">
+                <form onSubmit={handleSend} className="flex gap-2 items-center">
+                    <VoiceRecorder onSendVoice={handleSendVoice} />
                     <input
                         type="text"
-                        className="flex-1 border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm"
+                        className="flex-1 border border-gray-200 rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-sm"
                         placeholder={`Message ${activeTab}...`}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
@@ -194,9 +222,9 @@ export default function FamilyChatPage() {
                     <button
                         type="submit"
                         disabled={!input.trim() || (activeTab === 'caretaker' ? !caretaker : !patient)}
-                        className={`text-white p-3 rounded-full transition-colors shadow-sm disabled:opacity-50 ${activeTab === 'caretaker' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                        className={`w-11 h-11 text-white rounded-full flex items-center justify-center transition-colors shadow-sm disabled:opacity-50 flex-shrink-0 ${activeTab === 'caretaker' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-blue-600 hover:bg-blue-700'}`}
                     >
-                        <Send size={20} />
+                        <Send size={18} />
                     </button>
                 </form>
             </div>

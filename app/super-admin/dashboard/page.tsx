@@ -5,8 +5,10 @@ import { createClient } from '@/lib/supabaseClient'
 import { Plus, Building, Users, Trash2, PauseCircle, PlayCircle, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import LogoutButton from '@/components/LogoutButton'
+import { useLanguage } from '@/components/LanguageProvider'
 
 export default function SuperAdminDashboard() {
+    const { t } = useLanguage()
     const [organizations, setOrganizations] = useState<any[]>([])
     const [stats, setStats] = useState({
         totalOrgs: 0,
@@ -54,14 +56,14 @@ export default function SuperAdminDashboard() {
                 org.id === orgId ? { ...org, status: newStatus } : org
             ))
         } catch (error) {
-            alert('Error updating status')
+            alert(t('superAdminPortal.updateError'))
         } finally {
             setActionLoading(null)
         }
     }
 
     const handleDelete = async (orgId: string) => {
-        if (!confirm('Are you certain? This will delete the organization and ALL associated users, patients, and data. This cannot be undone.')) return
+        if (!confirm(t('superAdminPortal.deleteConfirm'))) return
 
         setActionLoading(orgId)
         try {
@@ -75,7 +77,7 @@ export default function SuperAdminDashboard() {
             setOrganizations(orgs => orgs.filter(org => org.id !== orgId))
             setStats(prev => ({ ...prev, totalOrgs: prev.totalOrgs - 1 }))
         } catch (error) {
-            alert('Error deleting organization')
+            alert(t('superAdminPortal.deleteError'))
         } finally {
             setActionLoading(null)
         }
@@ -86,11 +88,11 @@ export default function SuperAdminDashboard() {
     return (
         <div className="min-h-screen bg-gray-100 p-6">
             <header className="mb-8 flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-gray-800">Super Admin Dashboard</h1>
+                <h1 className="text-3xl font-bold text-gray-800">{t('superAdminPortal.dashboardTitle')}</h1>
                 <div className="flex gap-3">
                     <Link href="/super-admin/create-organization" className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700">
                         <Plus size={20} />
-                        Create Organization
+                        {t('superAdminPortal.createOrganization')}
                     </Link>
                     <LogoutButton />
                 </div>
@@ -104,7 +106,7 @@ export default function SuperAdminDashboard() {
                             <Building size={24} />
                         </div>
                         <div>
-                            <h3 className="text-gray-500 text-sm">Total Organizations</h3>
+                            <h3 className="text-gray-500 text-sm">{t('superAdminPortal.totalOrganizations')}</h3>
                             <p className="text-2xl font-bold">{stats.totalOrgs}</p>
                         </div>
                     </div>
@@ -114,33 +116,33 @@ export default function SuperAdminDashboard() {
             {/* Organizations List */}
             <div className="bg-white rounded-xl shadow overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200">
-                    <h2 className="text-lg font-semibold text-gray-700">All Organizations</h2>
+                    <h2 className="text-lg font-semibold text-gray-700">{t('superAdminPortal.allOrganizations')}</h2>
                 </div>
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('common.name')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('common.owner')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('common.createdAt')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('common.status')}</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">{t('common.actions')}</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {organizations.length === 0 ? (
-                            <tr><td colSpan={5} className="px-6 py-4 text-center">No organizations found</td></tr>
+                            <tr><td colSpan={5} className="px-6 py-4 text-center">{t('superAdminPortal.noOrganizationsFound')}</td></tr>
                         ) : (
                             organizations.map((org) => (
                                 <tr key={org.id} className={org.status === 'paused' ? 'bg-gray-50' : ''}>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900">{org.name}</div>
-                                        {org.status === 'paused' && <span className="text-xs text-red-500 font-bold">PAUSED</span>}
+                                        {org.status === 'paused' && <span className="text-xs text-red-500 font-bold">{t('common.paused').toUpperCase()}</span>}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-500">{org.owner_name}</div></td>
                                     <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-500">{new Date(org.created_at).toLocaleDateString()}</div></td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${org.status === 'paused' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
-                                            {org.status === 'paused' ? 'Paused' : 'Active'}
+                                            {org.status === 'paused' ? t('common.paused') : t('common.active')}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -150,14 +152,14 @@ export default function SuperAdminDashboard() {
                                                 disabled={actionLoading === org.id}
                                                 className={`text-xs px-2 py-1 rounded border ${org.status === 'paused' ? 'border-green-300 text-green-600 hover:bg-green-50' : 'border-yellow-300 text-yellow-600 hover:bg-yellow-50'}`}
                                             >
-                                                {actionLoading === org.id ? <Loader2 className="animate-spin" size={14} /> : (org.status === 'paused' ? 'Resume' : 'Pause')}
+                                                {actionLoading === org.id ? <Loader2 className="animate-spin" size={14} /> : (org.status === 'paused' ? t('common.resume') : t('common.pause'))}
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(org.id)}
                                                 disabled={actionLoading === org.id}
                                                 className="text-xs px-2 py-1 rounded border border-red-300 text-red-600 hover:bg-red-50"
                                             >
-                                                {actionLoading === org.id ? <Loader2 className="animate-spin" size={14} /> : 'Delete'}
+                                                {actionLoading === org.id ? <Loader2 className="animate-spin" size={14} /> : t('common.delete')}
                                             </button>
                                         </div>
                                     </td>

@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabaseClient'
 import { FileText, User, CheckCircle, Clock, AlertCircle, TrendingUp, BarChart3, PieChart, ArrowUpRight } from 'lucide-react'
+import { useLanguage } from '@/components/LanguageProvider'
 
 export default function ReportsPage() {
+    const { t } = useLanguage()
     const [caretakers, setCaretakers] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [orgName, setOrgName] = useState('')
@@ -102,7 +104,7 @@ export default function ReportsPage() {
             <div className="flex h-screen items-center justify-center bg-gray-50">
                 <div className="flex flex-col items-center gap-3">
                     <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-gray-500 font-medium">Loading reports...</p>
+                    <p className="text-gray-500 font-medium">{t('common.loading')}</p>
                 </div>
             </div>
         )
@@ -113,12 +115,12 @@ export default function ReportsPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Analytics & Reports</h1>
-                    <p className="text-gray-500 mt-1">Performance metrics for <span className="font-semibold text-gray-700">{orgName}</span></p>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{t('reports.title')}</h1>
+                    <p className="text-gray-500 mt-1">{t('reports.subtitle')} <span className="font-semibold text-gray-700">{orgName}</span></p>
                 </div>
                 <div className="bg-white px-5 py-2.5 rounded-full shadow-sm border border-gray-100 flex items-center gap-3 text-sm font-medium text-gray-600">
                     <User size={18} className="text-indigo-600" />
-                    <span>Total Staff: <span className="font-bold text-gray-900">{caretakers.length}</span></span>
+                    <span>{t('reports.totalStaff')}: <span className="font-bold text-gray-900">{caretakers.length}</span></span>
                 </div>
             </div>
 
@@ -139,12 +141,12 @@ export default function ReportsPage() {
                                     {caretaker.patient ? (
                                         <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
                                             <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                                            Assigned to: {caretaker.patient.name} ({caretaker.patient.room_number})
+                                            {t('reports.assignedTo')}: {caretaker.patient.name} ({caretaker.patient.room_number})
                                         </div>
                                     ) : (
                                         <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-xs font-medium">
                                             <AlertCircle size={12} />
-                                            No Active Assignment
+                                            {t('reports.noActiveAssignment')}
                                         </div>
                                     )}
                                 </div>
@@ -160,10 +162,10 @@ export default function ReportsPage() {
                                     <div className="absolute right-2 top-2 opacity-5 group-hover:opacity-10 transition-opacity">
                                         <FileText size={40} />
                                     </div>
-                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Total Tasks</p>
+                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">{t('reports.totalTasks')}</p>
                                     <div className="flex items-end gap-2">
                                         <span className="text-2xl font-bold text-gray-900">{caretaker.stats.total}</span>
-                                        <span className="text-xs text-gray-400 mb-1">tasks</span>
+                                        <span className="text-xs text-gray-400 mb-1">{t('reports.tasks')}</span>
                                     </div>
                                 </div>
 
@@ -171,7 +173,7 @@ export default function ReportsPage() {
                                     <div className="absolute right-2 top-2 opacity-5 text-green-600 group-hover:opacity-10 transition-opacity">
                                         <CheckCircle size={40} />
                                     </div>
-                                    <p className="text-xs font-medium text-green-600 uppercase tracking-wider mb-1">Completed</p>
+                                    <p className="text-xs font-medium text-green-600 uppercase tracking-wider mb-1">{t('reports.completed')}</p>
                                     <div className="flex items-end gap-2">
                                         <span className="text-2xl font-bold text-green-700">{caretaker.stats.completed}</span>
                                         <div className="flex items-center text-xs text-green-600 mb-1 bg-white/50 px-1.5 rounded">
@@ -185,10 +187,10 @@ export default function ReportsPage() {
                                     <div className="absolute right-2 top-2 opacity-5 text-orange-600 group-hover:opacity-10 transition-opacity">
                                         <Clock size={40} />
                                     </div>
-                                    <p className="text-xs font-medium text-orange-600 uppercase tracking-wider mb-1">Pending</p>
+                                    <p className="text-xs font-medium text-orange-600 uppercase tracking-wider mb-1">{t('reports.pending')}</p>
                                     <div className="flex items-end gap-2">
                                         <span className="text-2xl font-bold text-orange-700">{caretaker.stats.pending}</span>
-                                        <span className="text-xs text-orange-600/70 mb-1">remaining</span>
+                                        <span className="text-xs text-orange-600/70 mb-1">{t('reports.remaining')}</span>
                                     </div>
                                 </div>
 
@@ -198,14 +200,14 @@ export default function ReportsPage() {
                         {/* Progress Bar */}
                         <div className="mt-6 pt-6 border-t border-gray-50">
                             <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Overall Efficiency</span>
+                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('reports.efficiency')}</span>
                                 <span className="text-sm font-bold text-gray-900">{caretaker.stats.completionRate}%</span>
                             </div>
                             <div className="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden">
                                 <div
                                     className={`h-full rounded-full transition-all duration-1000 ease-out ${caretaker.stats.completionRate >= 80 ? 'bg-gradient-to-r from-green-500 to-emerald-400' :
-                                            caretaker.stats.completionRate >= 50 ? 'bg-gradient-to-r from-yellow-500 to-amber-400' :
-                                                'bg-gradient-to-r from-red-500 to-pink-500'
+                                        caretaker.stats.completionRate >= 50 ? 'bg-gradient-to-r from-yellow-500 to-amber-400' :
+                                            'bg-gradient-to-r from-red-500 to-pink-500'
                                         }`}
                                     style={{ width: `${caretaker.stats.completionRate}%` }}
                                 ></div>
@@ -219,8 +221,8 @@ export default function ReportsPage() {
                         <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                             <BarChart3 size={32} className="text-gray-300" />
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900">No Performance Data</h3>
-                        <p className="text-gray-500 max-w-sm mx-auto mt-2">Add caretakers and assign them tasks to see performance analytics appearing here.</p>
+                        <h3 className="text-lg font-bold text-gray-900">{t('reports.noData')}</h3>
+                        <p className="text-gray-500 max-w-sm mx-auto mt-2">{t('reports.noDataDesc')}</p>
                     </div>
                 )}
             </div>

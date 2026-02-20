@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabaseClient'
 import { Plus, Loader2, Calendar, User, CheckCircle, Clock, Search, Filter, X, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
+import { useLanguage } from '@/components/LanguageProvider'
 
 export default function ManageTasksPage() {
+    const { t } = useLanguage()
     const [tasks, setTasks] = useState<any[]>([])
     const [filteredTasks, setFilteredTasks] = useState<any[]>([])
     const [caretakers, setCaretakers] = useState<any[]>([])
@@ -138,15 +140,15 @@ export default function ManageTasksPage() {
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Task Management</h1>
-                    <p className="text-gray-500 mt-1">Assign, track, and manage care tasks efficiently.</p>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{t('tasks.title')}</h1>
+                    <p className="text-gray-500 mt-1">{t('tasks.subtitle')}</p>
                 </div>
                 <button
                     onClick={() => setShowModal(true)}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center gap-2 font-medium"
                 >
                     <Plus size={20} />
-                    Create New Task
+                    {t('tasks.createTask')}
                 </button>
             </div>
 
@@ -160,11 +162,11 @@ export default function ManageTasksPage() {
                             key={status}
                             onClick={() => setStatusFilter(status as any)}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition-all capitalize ${statusFilter === status
-                                    ? 'bg-white text-blue-600 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
                                 }`}
                         >
-                            {status}
+                            {status === 'all' ? t('common.all') : status === 'pending' ? t('common.pending') : t('common.completed')}
                         </button>
                     ))}
                 </div>
@@ -174,7 +176,7 @@ export default function ManageTasksPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <input
                         type="text"
-                        placeholder="Search tasks, caretakers, or patients..."
+                        placeholder={t('tasks.searchPlaceholder')}
                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -192,8 +194,8 @@ export default function ManageTasksPage() {
                     <div className="bg-gray-50 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4">
                         <CheckCircle className="h-8 w-8 text-gray-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">No tasks found</h3>
-                    <p className="text-gray-500 text-sm mt-1">Try adjusting your filters or create a new task.</p>
+                    <h3 className="text-lg font-semibold text-gray-900">{t('tasks.noTasks')}</h3>
+                    <p className="text-gray-500 text-sm mt-1">{t('tasks.noTasksDesc')}</p>
                 </div>
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -206,10 +208,10 @@ export default function ManageTasksPage() {
                             <div className="flex justify-between items-start mb-4 pl-3">
                                 <h3 className="font-bold text-lg text-gray-900 leading-snug group-hover:text-blue-600 transition-colors">{task.title}</h3>
                                 <span className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize border ${task.status === 'completed'
-                                        ? 'bg-green-50 text-green-700 border-green-100'
-                                        : 'bg-amber-50 text-amber-700 border-amber-100'
+                                    ? 'bg-green-50 text-green-700 border-green-100'
+                                    : 'bg-amber-50 text-amber-700 border-amber-100'
                                     }`}>
-                                    {task.status}
+                                    {task.status === 'completed' ? t('common.completed') : t('common.pending')}
                                 </span>
                             </div>
 
@@ -223,7 +225,7 @@ export default function ManageTasksPage() {
                                         <User size={14} />
                                     </div>
                                     <div className="overflow-hidden">
-                                        <p className="font-medium text-gray-900 truncate">{task.caretakers?.name || 'Unassigned'}</p>
+                                        <p className="font-medium text-gray-900 truncate">{task.caretakers?.name || t('patients.unassigned')}</p>
                                         <p className="text-xs text-gray-500 truncate">Caretaker</p>
                                     </div>
                                 </div>
@@ -262,7 +264,7 @@ export default function ManageTasksPage() {
                                 <div className="mt-4 pl-3">
                                     <a href={task.proof_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-xs font-medium hover:underline flex items-center gap-1">
                                         <CheckCircle size={12} />
-                                        View Completion Proof
+                                        {t('tasks.viewProof')}
                                     </a>
                                 </div>
                             )}
@@ -278,7 +280,7 @@ export default function ManageTasksPage() {
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
 
                         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                            <h2 className="text-xl font-bold text-gray-900">Assign New Task</h2>
+                            <h2 className="text-xl font-bold text-gray-900">{t('tasks.assignNew')}</h2>
                             <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
                                 <X size={24} />
                             </button>
@@ -286,7 +288,7 @@ export default function ManageTasksPage() {
 
                         <form onSubmit={handleCreate} className="p-6 space-y-5">
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Task Title</label>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('tasks.taskTitle')}</label>
                                 <input
                                     type="text"
                                     required
@@ -299,26 +301,26 @@ export default function ManageTasksPage() {
 
                             <div className="grid grid-cols-2 gap-5">
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Assign To</label>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('tasks.assignTo')}</label>
                                     <select
                                         className="block w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm py-2.5 px-3"
                                         value={formData.caretaker_id}
                                         onChange={e => setFormData({ ...formData, caretaker_id: e.target.value })}
                                     >
-                                        <option value="">Select Caretaker</option>
+                                        <option value="">{t('tasks.selectCaretaker')}</option>
                                         {caretakers.map(c => (
                                             <option key={c.id} value={c.id}>{c.name}</option>
                                         ))}
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Patient</label>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('common.patients')}</label>
                                     <select
                                         className="block w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm py-2.5 px-3"
                                         value={formData.patient_id}
                                         onChange={e => setFormData({ ...formData, patient_id: e.target.value })}
                                     >
-                                        <option value="">Select Patient</option>
+                                        <option value="">{t('families.selectPatient')}</option>
                                         {patients.map(p => (
                                             <option key={p.id} value={p.id}>{p.name}</option>
                                         ))}
@@ -327,7 +329,7 @@ export default function ManageTasksPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Description</label>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('tasks.description')}</label>
                                 <textarea
                                     className="block w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm py-2.5 px-3"
                                     rows={3}
@@ -339,7 +341,7 @@ export default function ManageTasksPage() {
 
                             <div className="grid grid-cols-3 gap-5">
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Due Date</label>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('tasks.dueDate')}</label>
                                     <input
                                         type="date"
                                         className="block w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm py-2.5 px-3"
@@ -348,7 +350,7 @@ export default function ManageTasksPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Start Time</label>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('tasks.startTime')}</label>
                                     <input
                                         type="time"
                                         className="block w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm py-2.5 px-3"
@@ -357,7 +359,7 @@ export default function ManageTasksPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">End Time</label>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('tasks.endTime')}</label>
                                     <input
                                         type="time"
                                         className="block w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm text-sm py-2.5 px-3"
@@ -373,7 +375,7 @@ export default function ManageTasksPage() {
                                     onClick={() => setShowModal(false)}
                                     className="px-5 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 font-medium text-sm transition-colors"
                                 >
-                                    Cancel
+                                    {t('common.cancel')}
                                 </button>
                                 <button
                                     type="submit"
@@ -381,7 +383,7 @@ export default function ManageTasksPage() {
                                     className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm shadow-md shadow-blue-200 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                                 >
                                     {creating && <Loader2 className="animate-spin h-4 w-4" />}
-                                    Assign Task
+                                    {t('tasks.assignButton')}
                                 </button>
                             </div>
                         </form>
