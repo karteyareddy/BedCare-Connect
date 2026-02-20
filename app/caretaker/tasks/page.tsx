@@ -6,6 +6,7 @@ import { Camera, CheckCircle, Clock, UploadCloud, Loader2 } from 'lucide-react'
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { saveToDevice, addToSyncQueue } from '@/lib/offlineStorage'
 import { useNetworkStatus } from '@/components/NetworkStatusProvider'
+import OrgPageBackground from '@/components/OrgPageBackground'
 
 export default function CaretakerTasksPage() {
     const [tasks, setTasks] = useState<any[]>([])
@@ -59,13 +60,18 @@ export default function CaretakerTasksPage() {
 
             if (!image.base64String) return
 
+            // 1.5 Add Timestamp
+            const timestampedBase64 = await addTimestampToImage(image.base64String)
+            // Strip prefix for upload logic
+            const base64Data = timestampedBase64.split(',')[1]
+
             // 2. Save/Upload Logic
             let proofUrl = ''
 
             if (online) {
                 // Upload to Supabase Storage
                 const fileName = `${taskId}_${Date.now()}.jpeg`
-                const { data, error } = await supabase.storage.from('task-proofs').upload(fileName, decode(image.base64String), {
+                const { data, error } = await supabase.storage.from('task-proofs').upload(fileName, decode(base64Data), {
                     contentType: 'image/jpeg'
                 })
 
@@ -79,7 +85,7 @@ export default function CaretakerTasksPage() {
             } else {
                 // Offline: Save to filesystem and queue sync
                 const fileName = `${taskId}_${Date.now()}.jpeg`
-                const savedUri = await saveToDevice(fileName, image.base64String)
+                const savedUri = await saveToDevice(fileName, base64Data)
                 proofUrl = savedUri // This is a local URI
 
                 // Queue the upload tasks
@@ -115,68 +121,115 @@ export default function CaretakerTasksPage() {
         return bytes;
     }
 
+    const addTimestampToImage = (base64: string): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const img = new Image()
+            img.onload = () => {
+                const canvas = document.createElement('canvas')
+                canvas.width = img.width
+                canvas.height = img.height
+                const ctx = canvas.getContext('2d')
+                if (!ctx) return reject('No context')
+
+                // Draw image
+                ctx.drawImage(img, 0, 0)
+
+                // Configure text
+                const now = new Date()
+                const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString()
+                // Responsive font size: 4% of image height
+                const fontSize = Math.max(16, Math.floor(img.height * 0.04))
+
+                ctx.font = `bold ${fontSize}px sans-serif`
+                ctx.fillStyle = '#ffffff'
+                ctx.strokeStyle = 'rgba(0,0,0,0.8)'
+                ctx.lineWidth = Math.max(2, fontSize / 8)
+                ctx.textAlign = 'right'
+                ctx.textBaseline = 'bottom'
+
+                // Position: bottom right with padding
+                const x = img.width - (img.width * 0.03) // 3% padding
+                const y = img.height - (img.height * 0.03)
+
+                // Draw text with outline
+                ctx.strokeText(dateStr, x, y)
+                ctx.fillText(dateStr, x, y)
+
+                resolve(canvas.toDataURL('image/jpeg', 0.9))
+            }
+            img.onerror = (e) => {
+                console.error('Image load error', e)
+                resolve(`data:image/jpeg;base64,${base64}`) // Fallback to original
+            }
+            img.src = `data:image/jpeg;base64,${base64}`
+        })
+    }
+
     return (
-        <div className="pb-20">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">My Tasks</h1>
+        <div className="pb-20 relative">
+            <OrgPageBackground />
+            <div className="relative z-10">
+                <h1 className="text-2xl font-bold text-gray-900 mb-6">My Tasks</h1>
 
-            {/* Tabs */}
-            <div className="flex p-1 bg-gray-200 rounded-xl mb-6">
-                <button
-                    onClick={() => setActiveTab('pending')}
-                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'pending' ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
-                >
-                    Pending
-                </button>
-                <button
-                    onClick={() => setActiveTab('completed')}
-                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'completed' ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
-                >
-                    Completed
-                </button>
-            </div>
+                {/* Tabs */}
+                <div className="flex p-1 bg-gray-200 rounded-xl mb-6">
+                    <button
+                        onClick={() => setActiveTab('pending')}
+                        className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'pending' ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
+                    >
+                        Pending
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('completed')}
+                        className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'completed' ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
+                    >
+                        Completed
+                    </button>
+                </div>
 
-            <div className="space-y-4">
-                {loading ? (
-                    <div className="flex justify-center py-8"><Loader2 className="animate-spin text-indigo-600" /></div>
-                ) : tasks.length === 0 ? (
-                    <div className="text-center py-10">
-                        <p className="text-gray-500">No {activeTab} tasks found.</p>
-                    </div>
-                ) : (
-                    tasks.map((task) => (
-                        <div key={task.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full mb-1 inline-block">
-                                        Room {task.patients?.room_number}
-                                    </span>
-                                    <h3 className="font-bold text-gray-900">{task.title}</h3>
-                                    <p className="text-sm text-gray-500">{task.description}</p>
-                                </div>
-                                <div className="flex items-center text-xs text-orange-500 font-medium whitespace-nowrap">
-                                    <Clock size={12} className="mr-1" />
-                                    {task.due_date ? new Date(task.due_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No due time'}
-                                </div>
-                            </div>
-
-                            {activeTab === 'pending' && (
-                                <button
-                                    onClick={() => handleCompleteTask(task.id)}
-                                    className="bg-indigo-600 text-white w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 mt-2 active:bg-indigo-700 transition-colors"
-                                >
-                                    <Camera size={18} />
-                                    Complete & Upload Proof
-                                </button>
-                            )}
-
-                            {activeTab === 'completed' && (
-                                <div className="text-green-600 text-sm font-medium flex items-center gap-1 mt-1">
-                                    <CheckCircle size={16} /> Completed
-                                </div>
-                            )}
+                <div className="space-y-4">
+                    {loading ? (
+                        <div className="flex justify-center py-8"><Loader2 className="animate-spin text-indigo-600" /></div>
+                    ) : tasks.length === 0 ? (
+                        <div className="text-center py-10">
+                            <p className="text-gray-500">No {activeTab} tasks found.</p>
                         </div>
-                    ))
-                )}
+                    ) : (
+                        tasks.map((task) => (
+                            <div key={task.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full mb-1 inline-block">
+                                            Room {task.patients?.room_number}
+                                        </span>
+                                        <h3 className="font-bold text-gray-900">{task.title}</h3>
+                                        <p className="text-sm text-gray-500">{task.description}</p>
+                                    </div>
+                                    <div className="flex items-center text-xs text-orange-500 font-medium whitespace-nowrap">
+                                        <Clock size={12} className="mr-1" />
+                                        {task.due_date ? new Date(task.due_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No due time'}
+                                    </div>
+                                </div>
+
+                                {activeTab === 'pending' && (
+                                    <button
+                                        onClick={() => handleCompleteTask(task.id)}
+                                        className="bg-indigo-600 text-white w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 mt-2 active:bg-indigo-700 transition-colors"
+                                    >
+                                        <Camera size={18} />
+                                        Complete & Upload Proof
+                                    </button>
+                                )}
+
+                                {activeTab === 'completed' && (
+                                    <div className="text-green-600 text-sm font-medium flex items-center gap-1 mt-1">
+                                        <CheckCircle size={16} /> Completed
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
         </div>
     )

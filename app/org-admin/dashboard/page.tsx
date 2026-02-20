@@ -8,9 +8,10 @@ import {
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, Legend
+    PieChart, Pie, Cell, Legend, Label
 } from 'recharts'
 import { useLanguage } from '@/components/LanguageProvider'
+import OrgPageBackground from '@/components/OrgPageBackground'
 
 export default function DashboardPage() {
     const { t } = useLanguage()
@@ -139,200 +140,212 @@ export default function DashboardPage() {
         { name: t('common.overdue'), value: pieData.overdue },
     ]
 
+    const totalTasks = pieData.completed + pieData.pending + pieData.overdue
+    const completionPercentage = totalTasks > 0 ? Math.round((pieData.completed / totalTasks) * 100) : 0
+
     const COLORS = ['#10B981', '#F59E0B', '#EF4444']
 
     return (
-        <div className="p-6 md:p-10 space-y-8 bg-gray-50/50 min-h-screen">
-            <div>
-                <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{t('common.dashboard')}</h1>
-                <p className="text-gray-500 mt-1">{t('common.performanceMetrics')} BedCare</p>
-            </div>
+        <div className="p-6 md:p-10 space-y-8 min-h-screen relative">
+            <OrgPageBackground />
+            <div className="relative z-10 space-y-12">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{t('common.dashboard')}</h1>
+                    <p className="text-gray-500 mt-1">{t('common.performanceMetrics')} BedCare</p>
+                </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
-                    <div>
-                        <p className="text-gray-500 text-sm font-medium">{t('common.totalStaff')}</p>
-                        <h3 className="text-3xl font-bold text-gray-900 mt-1">{stats.totalStaff}</h3>
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
+                        <div>
+                            <p className="text-gray-500 text-sm font-medium">{t('common.totalStaff')}</p>
+                            <h3 className="text-3xl font-bold text-gray-900 mt-1">{stats.totalStaff}</h3>
+                        </div>
+                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                            <Users size={24} />
+                        </div>
                     </div>
-                    <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
-                        <Users size={24} />
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
+                        <div>
+                            <p className="text-gray-500 text-sm font-medium">{t('common.activePatients')}</p>
+                            <h3 className="text-3xl font-bold text-gray-900 mt-1">{stats.activePatients}</h3>
+                        </div>
+                        <div className="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
+                            <Activity size={24} />
+                        </div>
                     </div>
-                </div>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
-                    <div>
-                        <p className="text-gray-500 text-sm font-medium">{t('common.activePatients')}</p>
-                        <h3 className="text-3xl font-bold text-gray-900 mt-1">{stats.activePatients}</h3>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
+                        <div>
+                            <p className="text-gray-500 text-sm font-medium">{t('common.pendingAlerts')}</p>
+                            <h3 className="text-3xl font-bold text-gray-900 mt-1">{stats.pendingAlerts}</h3>
+                        </div>
+                        <div className="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center animate-pulse">
+                            <AlertTriangle size={24} />
+                        </div>
                     </div>
-                    <div className="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
-                        <Activity size={24} />
-                    </div>
-                </div>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
-                    <div>
-                        <p className="text-gray-500 text-sm font-medium">{t('common.pendingAlerts')}</p>
-                        <h3 className="text-3xl font-bold text-gray-900 mt-1">{stats.pendingAlerts}</h3>
-                    </div>
-                    <div className="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center animate-pulse">
-                        <AlertTriangle size={24} />
-                    </div>
-                </div>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
-                    <div>
-                        <p className="text-gray-500 text-sm font-medium">{t('common.todayTasks')}</p>
-                        <h3 className="text-3xl font-bold text-gray-900 mt-1">{stats.todayTasks}</h3>
-                    </div>
-                    <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
-                        <ClipboardList size={24} />
-                    </div>
-                </div>
-            </div>
-
-            {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Bar Chart */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-900 mb-6">{t('common.taskCompletionRate')}</h3>
-                    <div className="h-72 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={taskCompletionData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} dy={10} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-                                <Tooltip
-                                    cursor={{ fill: '#F3F4F6' }}
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                                />
-                                <Bar dataKey="completed" fill="#4F46E5" radius={[4, 4, 0, 0]} barSize={32} />
-                                <Bar dataKey="pending" fill="#E5E7EB" radius={[4, 4, 0, 0]} barSize={32} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
+                        <div>
+                            <p className="text-gray-500 text-sm font-medium">{t('common.todayTasks')}</p>
+                            <h3 className="text-3xl font-bold text-gray-900 mt-1">{stats.todayTasks}</h3>
+                        </div>
+                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+                            <ClipboardList size={24} />
+                        </div>
                     </div>
                 </div>
 
-                {/* Pie Chart */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-900 mb-6">{t('common.taskStatusOverview')}</h3>
-                    <div className="h-72 w-full flex items-center justify-center">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={taskStatusData}
-                                    innerRadius={80}
-                                    outerRadius={100}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {taskStatusData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                                <Legend
-                                    verticalAlign="bottom"
-                                    height={36}
-                                    iconType="circle"
-                                    formatter={(value, entry: any) => (
-                                        <span className="text-gray-600 font-medium ml-1">
-                                            {value} <span className="text-gray-400">({entry.payload.value})</span>
-                                        </span>
-                                    )}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
+                {/* Charts Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Bar Chart */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h3 className="text-lg font-bold text-gray-900 mb-6">{t('common.taskCompletionRate')}</h3>
+                        <div className="h-72 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={taskCompletionData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                                    <Tooltip
+                                        cursor={{ fill: '#F3F4F6' }}
+                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                                    />
+                                    <Bar dataKey="completed" fill="#4F46E5" radius={[4, 4, 0, 0]} barSize={32} />
+                                    <Bar dataKey="pending" fill="#E5E7EB" radius={[4, 4, 0, 0]} barSize={32} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            {/* Recent Alerts & Health */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Recent Alerts List */}
-                <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                        <h3 className="font-bold text-gray-900">{t('common.pendingAlerts')}</h3>
-                        <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">{t('common.needsAttention')}</span>
-                    </div>
-                    <div className="divide-y divide-gray-100">
-                        {alerts.length === 0 ? (
-                            <div className="p-8 text-center text-gray-500">
-                                <CheckCircle className="mx-auto h-10 w-10 text-green-400 mb-3" />
-                                <p>{t('common.systemOperational')}</p>
-                            </div>
-                        ) : (
-                            alerts.map(alert => (
-                                <div key={alert.id} className="p-6 flex items-start gap-4 hover:bg-gray-50 transition-colors">
-                                    <div className="mt-1">
-                                        <AlertTriangle size={20} className="text-red-500" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-start">
-                                            <h4 className="font-medium text-gray-900">{alert.message}</h4>
-                                            <span className="text-xs text-gray-500 whitespace-nowrap">{new Date(alert.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                        </div>
-                                        <p className="text-sm text-gray-600 mt-1">{t('common.type')}: <span className="font-medium capitalize">{alert.type}</span></p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                                                {alert.patients?.name || t('common.unknown')}
+                    {/* Pie Chart */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <h3 className="text-lg font-bold text-gray-900 mb-6">{t('common.taskStatusOverview')}</h3>
+                        <div className="h-72 w-full flex items-center justify-center">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={taskStatusData}
+                                        innerRadius={80}
+                                        outerRadius={100}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {taskStatusData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                        <Label
+                                            value={`${completionPercentage}%`}
+                                            position="center"
+                                            className="text-3xl font-bold fill-gray-900"
+                                            style={{ fontSize: '24px', fontWeight: 'bold', fill: '#111827' }}
+                                        />
+                                    </Pie>
+                                    <Tooltip />
+                                    <Legend
+                                        verticalAlign="bottom"
+                                        height={36}
+                                        iconType="circle"
+                                        formatter={(value, entry: any) => (
+                                            <span className="text-gray-600 font-medium ml-1">
+                                                {value} <span className="text-gray-400">({entry.payload.value})</span>
                                             </span>
-                                            <button
-                                                onClick={() => handleResolveAlert(alert.id)}
-                                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                                            >
-                                                {t('common.markResolved')}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
+                                        )}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
                 </div>
 
-                {/* Organization Health */}
-                <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <Activity size={120} />
+                {/* Recent Alerts & Health */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Recent Alerts List */}
+                    <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <h3 className="font-bold text-gray-900">{t('common.pendingAlerts')}</h3>
+                            <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">{t('common.needsAttention')}</span>
+                        </div>
+                        <div className="divide-y divide-gray-100">
+                            {alerts.length === 0 ? (
+                                <div className="p-8 text-center text-gray-500">
+                                    <CheckCircle className="mx-auto h-10 w-10 text-green-400 mb-3" />
+                                    <p>{t('common.systemOperational')}</p>
+                                </div>
+                            ) : (
+                                alerts.map(alert => (
+                                    <div key={alert.id} className="p-6 flex items-start gap-4 hover:bg-gray-50 transition-colors">
+                                        <div className="mt-1">
+                                            <AlertTriangle size={20} className="text-red-500" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex justify-between items-start">
+                                                <h4 className="font-medium text-gray-900">{alert.message}</h4>
+                                                <span className="text-xs text-gray-500 whitespace-nowrap">{new Date(alert.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            </div>
+                                            <p className="text-sm text-gray-600 mt-1">{t('common.type')}: <span className="font-medium capitalize">{alert.type}</span></p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                                    {alert.patients?.name || t('common.unknown')}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleResolveAlert(alert.id)}
+                                                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                                >
+                                                    {t('common.markResolved')}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
-                    <h3 className="font-bold text-lg mb-1">{t('common.organizationHealth')}</h3>
-                    <p className="text-indigo-100 text-sm mb-6">{t('common.performanceMetrics')}</p>
 
-                    <div className="space-y-4">
-                        <div>
-                            <div className="flex justify-between text-sm mb-1">
-                                <span>{t('common.systemOperational')}</span>
-                                <span className="font-bold">98%</span>
-                            </div>
-                            <div className="h-2 bg-black/20 rounded-full overflow-hidden">
-                                <div className="h-full bg-green-400 w-[98%] rounded-full"></div>
-                            </div>
+                    {/* Organization Health */}
+                    <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                            <Activity size={120} />
                         </div>
-                        <div>
-                            <div className="flex justify-between text-sm mb-1">
-                                <span>{t('caretakers.active')}</span>
-                                <span className="font-bold">100%</span>
-                            </div>
-                            <div className="h-2 bg-black/20 rounded-full overflow-hidden">
-                                <div className="h-full bg-blue-400 w-full rounded-full"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div className="flex justify-between text-sm mb-1">
-                                <span>{t('common.registered')}</span>
-                                <span className="font-bold">85%</span>
-                            </div>
-                            <div className="h-2 bg-black/20 rounded-full overflow-hidden">
-                                <div className="h-full bg-purple-400 w-[85%] rounded-full"></div>
-                            </div>
-                        </div>
-                    </div>
+                        <h3 className="font-bold text-lg mb-1">{t('common.organizationHealth')}</h3>
+                        <p className="text-indigo-100 text-sm mb-6">{t('common.performanceMetrics')}</p>
 
-                    <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between">
-                        <div>
-                            <p className="text-indigo-100 text-xs uppercase tracking-wider">{t('common.thisWeek')}</p>
-                            <p className="text-2xl font-bold">+24%</p>
+                        <div className="space-y-4">
+                            <div>
+                                <div className="flex justify-between text-sm mb-1">
+                                    <span>{t('common.systemOperational')}</span>
+                                    <span className="font-bold">98%</span>
+                                </div>
+                                <div className="h-2 bg-black/20 rounded-full overflow-hidden">
+                                    <div className="h-full bg-green-400 w-[98%] rounded-full"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div className="flex justify-between text-sm mb-1">
+                                    <span>{t('caretakers.active')}</span>
+                                    <span className="font-bold">100%</span>
+                                </div>
+                                <div className="h-2 bg-black/20 rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-400 w-full rounded-full"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div className="flex justify-between text-sm mb-1">
+                                    <span>{t('common.registered')}</span>
+                                    <span className="font-bold">85%</span>
+                                </div>
+                                <div className="h-2 bg-black/20 rounded-full overflow-hidden">
+                                    <div className="h-full bg-purple-400 w-[85%] rounded-full"></div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="h-10 w-10 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm">
-                            <TrendingUp size={20} />
+
+                        <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between">
+                            <div>
+                                <p className="text-indigo-100 text-xs uppercase tracking-wider">{t('common.thisWeek')}</p>
+                                <p className="text-2xl font-bold">+24%</p>
+                            </div>
+                            <div className="h-10 w-10 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm">
+                                <TrendingUp size={20} />
+                            </div>
                         </div>
                     </div>
                 </div>

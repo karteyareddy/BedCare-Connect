@@ -171,7 +171,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
 
                 {/* Page Content */}
                 <main className="flex-1 overflow-y-auto p-4 pb-24 md:pb-6">
-                    <div className="max-w-lg mx-auto w-full">
+                    <div className="max-w-[1600px] mx-auto w-full">
                         {children}
                     </div>
                 </main>

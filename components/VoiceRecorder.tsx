@@ -17,10 +17,29 @@ export default function VoiceRecorder({ onSendVoice, disabled }: VoiceRecorderPr
     const chunksRef = useRef<Blob[]>([])
     const timerRef = useRef<NodeJS.Timeout | null>(null)
 
+    const getSupportedMimeType = () => {
+        const types = [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/mp4',
+            'audio/ogg;codecs=opus',
+            'audio/aac'
+        ]
+        for (const type of types) {
+            if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) {
+                return type
+            }
+        }
+        return ''
+    }
+
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-            const mediaRecorder = new MediaRecorder(stream)
+            const mimeType = getSupportedMimeType()
+            const options = mimeType ? { mimeType } : undefined
+
+            const mediaRecorder = new MediaRecorder(stream, options)
             mediaRecorderRef.current = mediaRecorder
             chunksRef.current = []
             setDuration(0)
@@ -32,7 +51,9 @@ export default function VoiceRecorder({ onSendVoice, disabled }: VoiceRecorderPr
             }
 
             mediaRecorder.onstop = () => {
-                const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+                // Use the actual mime type from the recorder or fallback
+                const type = mediaRecorder.mimeType || 'audio/webm'
+                const blob = new Blob(chunksRef.current, { type })
                 setAudioBlob(blob)
                 setAudioUrl(URL.createObjectURL(blob))
                 stream.getTracks().forEach(t => t.stop())
@@ -50,8 +71,9 @@ export default function VoiceRecorder({ onSendVoice, disabled }: VoiceRecorderPr
                     return d + 1
                 })
             }, 1000)
-        } catch (err) {
-            alert('Microphone access denied. Please allow microphone permission.')
+        } catch (err: any) {
+            console.error('Error accessing microphone:', err)
+            alert(`Microphone access denied or error occurred: ${err.message || err.name}. Please check permissions.`)
         }
     }
 

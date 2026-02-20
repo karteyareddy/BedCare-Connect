@@ -9,6 +9,61 @@ import OrganizationGuard from '@/components/OrganizationGuard'
 import { useLanguage } from '@/components/LanguageProvider'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 
+// Decorative SVG for sidebar
+const SidebarDecor = () => (
+    <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 800" preserveAspectRatio="xMidYMid slice">
+        <defs>
+            <radialGradient id="sbg" cx="50%" cy="100%" r="70%">
+                <stop offset="0%" stopColor="rgba(99,102,241,0.25)" />
+                <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+            </radialGradient>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#sbg)" />
+        {/* Medical crosses removed */}
+        {/* Floating dots removed */}
+        {/* Soft glow blob */}
+        <circle cx="40" cy="750" r="90" fill="rgba(99,102,241,0.12)" />
+        <circle cx="10" cy="150" r="50" fill="rgba(99,102,241,0.08)" />
+    </svg>
+)
+
+// Decorative SVG for main content area
+const ContentDecor = () => (
+    <svg
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 1200 800"
+        preserveAspectRatio="xMidYMid slice"
+    >
+        {/* Corner blobs */}
+        <circle cx="0" cy="0" r="280" fill="rgba(99,102,241,0.18)" />
+        <circle cx="1200" cy="800" r="300" fill="rgba(13,148,136,0.15)" />
+        <circle cx="1200" cy="0" r="180" fill="rgba(99,102,241,0.10)" />
+        <circle cx="0" cy="800" r="180" fill="rgba(13,148,136,0.10)" />
+
+        {/* Top ECG heartbeat line */}
+        <polyline
+            points="0,50 120,50 150,15 180,85 210,0 240,85 270,50 1200,50"
+            fill="none" stroke="rgba(99,102,241,0.30)" strokeWidth="3"
+            strokeLinecap="round" strokeLinejoin="round"
+        />
+        {/* Bottom ECG heartbeat line */}
+        <polyline
+            points="0,760 120,760 150,725 180,795 210,710 240,795 270,760 1200,760"
+            fill="none" stroke="rgba(13,148,136,0.30)" strokeWidth="3"
+            strokeLinecap="round" strokeLinejoin="round"
+        />
+        {/* Middle ECG line */}
+        <polyline
+            points="0,400 200,400 230,370 260,430 290,350 320,430 350,400 1200,400"
+            fill="none" stroke="rgba(99,102,241,0.12)" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"
+        />
+
+        {/* Decorations removed for cleaner UI */}
+    </svg>
+)
+
 export default function OrgAdminLayout({
     children,
 }: {
@@ -41,11 +96,12 @@ export default function OrgAdminLayout({
             <div className="flex h-screen bg-gray-100">
                 {/* Sidebar */}
                 <aside
-                    className={`bg-white shadow-xl hidden md:flex flex-col transition-all duration-300 ease-in-out z-20 ${isSidebarExpanded ? 'w-64' : 'w-20'
+                    className={`bg-white shadow-xl hidden md:flex flex-col transition-all duration-300 ease-in-out z-20 relative overflow-hidden ${isSidebarExpanded ? 'w-64' : 'w-20'
                         }`}
                     onMouseEnter={() => setIsSidebarExpanded(true)}
                     onMouseLeave={() => setIsSidebarExpanded(false)}
                 >
+                    <SidebarDecor />
                     <div className="p-6 border-b flex items-center justify-between whitespace-nowrap h-20">
                         {isSidebarExpanded ? (
                             <div className="transition-opacity duration-300 opacity-100">
@@ -65,8 +121,8 @@ export default function OrgAdminLayout({
                                 key={item.href}
                                 href={item.href}
                                 className={`flex items-center gap-4 px-3 py-3 rounded-lg transition-all duration-200 whitespace-nowrap ${isActive(item.href)
-                                        ? 'bg-indigo-50 text-indigo-600 font-medium'
-                                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 line-clamp-1'
+                                    ? 'bg-indigo-50 text-indigo-600 font-medium'
+                                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 line-clamp-1'
                                     } ${!isSidebarExpanded ? 'justify-center' : ''}`}
                             >
                                 <item.icon size={24} className={`flex-shrink-0 ${isActive(item.href) ? 'text-indigo-600' : 'text-gray-400'}`} />
@@ -104,8 +160,11 @@ export default function OrgAdminLayout({
                 </aside>
 
                 {/* Main Content */}
-                <main className="flex-1 overflow-y-auto p-4 md:p-8 transition-all duration-300">
-                    {children}
+                <main className="flex-1 overflow-y-auto p-4 md:p-8 transition-all duration-300 relative">
+                    <ContentDecor />
+                    <div className="relative z-10">
+                        {children}
+                    </div>
                 </main>
             </div>
         </OrganizationGuard>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabaseClient'
 import dynamic from 'next/dynamic'
 import { BarChart2, TrendingUp, CheckCircle, Clock } from 'lucide-react'
+import OrgPageBackground from '@/components/OrgPageBackground'
 
 const TaskStatusPieChart = dynamic(() => import('@/components/TaskStatusPieChart'), { ssr: false })
 const TaskCompletionChart = dynamic(() => import('@/components/TaskCompletionChart'), { ssr: false })
@@ -103,97 +104,100 @@ export default function FamilyReportsPage() {
     const completionRate = total > 0 ? Math.round((pieData.completed / total) * 100) : 0
 
     return (
-        <div className="space-y-6 pb-10">
-            {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">Care Reports</h1>
-                <p className="text-gray-500 text-sm mt-1">
-                    {patient ? `Data visualization for ${patient.name}` : 'Care analytics and trends'}
-                </p>
-            </div>
+        <div className="space-y-6 pb-10 relative">
+            <OrgPageBackground />
+            <div className="relative z-10">
+                {/* Header */}
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Care Reports</h1>
+                    <p className="text-gray-500 text-sm mt-1">
+                        {patient ? `Data visualization for ${patient.name}` : 'Care analytics and trends'}
+                    </p>
+                </div>
 
-            {/* Overall Stats */}
-            <div className="grid grid-cols-3 gap-4">
-                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-4 text-white shadow-sm text-center">
-                    <p className="text-2xl font-bold">{total}</p>
-                    <p className="text-xs text-indigo-200 mt-1">Total Tasks</p>
-                </div>
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-4 text-white shadow-sm text-center">
-                    <p className="text-2xl font-bold">{pieData.completed}</p>
-                    <p className="text-xs text-emerald-200 mt-1">Completed</p>
-                </div>
-                <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-4 text-white shadow-sm text-center">
-                    <p className="text-2xl font-bold">{completionRate}%</p>
-                    <p className="text-xs text-amber-200 mt-1">Success Rate</p>
-                </div>
-            </div>
-
-            {/* Charts */}
-            {total > 0 ? (
-                <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className="p-2 bg-indigo-50 rounded-lg">
-                                    <BarChart2 size={16} className="text-indigo-600" />
-                                </div>
-                                <h2 className="font-bold text-gray-800">Task Status Overview</h2>
-                            </div>
-                            <TaskStatusPieChart completed={pieData.completed} pending={pieData.pending} />
-                        </div>
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className="p-2 bg-emerald-50 rounded-lg">
-                                    <TrendingUp size={16} className="text-emerald-600" />
-                                </div>
-                                <h2 className="font-bold text-gray-800">7-Day Completion Trend</h2>
-                            </div>
-                            <TaskCompletionChart data={chartData} />
-                        </div>
+                {/* Overall Stats */}
+                <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-4 text-white shadow-sm text-center">
+                        <p className="text-2xl font-bold">{total}</p>
+                        <p className="text-xs text-indigo-200 mt-1">Total Tasks</p>
                     </div>
+                    <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-4 text-white shadow-sm text-center">
+                        <p className="text-2xl font-bold">{pieData.completed}</p>
+                        <p className="text-xs text-emerald-200 mt-1">Completed</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-4 text-white shadow-sm text-center">
+                        <p className="text-2xl font-bold">{completionRate}%</p>
+                        <p className="text-xs text-amber-200 mt-1">Success Rate</p>
+                    </div>
+                </div>
 
-                    {/* Weekly Breakdown Table */}
-                    {weeklyStats.length > 0 && (
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div className="px-6 py-4 border-b border-gray-100">
-                                <h2 className="font-bold text-gray-800">Daily Breakdown</h2>
-                            </div>
-                            <div className="divide-y divide-gray-50">
-                                {weeklyStats.map((day, i) => (
-                                    <div key={i} className="px-6 py-4">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <p className="text-sm font-semibold text-gray-700">{day.date}</p>
-                                            <span className="text-xs text-gray-400">{day.total} tasks</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-                                                <div
-                                                    className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all"
-                                                    style={{ width: `${day.pct}%` }}
-                                                />
-                                            </div>
-                                            <div className="flex items-center gap-3 text-xs">
-                                                <span className="flex items-center gap-1 text-green-600">
-                                                    <CheckCircle size={12} />{day.completed}
-                                                </span>
-                                                <span className="flex items-center gap-1 text-amber-600">
-                                                    <Clock size={12} />{day.pending}
-                                                </span>
-                                            </div>
-                                        </div>
+                {/* Charts */}
+                {total > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="p-2 bg-indigo-50 rounded-lg">
+                                        <BarChart2 size={16} className="text-indigo-600" />
                                     </div>
-                                ))}
+                                    <h2 className="font-bold text-gray-800">Task Status Overview</h2>
+                                </div>
+                                <TaskStatusPieChart completed={pieData.completed} pending={pieData.pending} />
+                            </div>
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="p-2 bg-emerald-50 rounded-lg">
+                                        <TrendingUp size={16} className="text-emerald-600" />
+                                    </div>
+                                    <h2 className="font-bold text-gray-800">7-Day Completion Trend</h2>
+                                </div>
+                                <TaskCompletionChart data={chartData} />
                             </div>
                         </div>
-                    )}
-                </>
-            ) : (
-                <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200">
-                    <BarChart2 size={40} className="text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 font-medium">No data available yet</p>
-                    <p className="text-gray-400 text-sm mt-1">Reports will appear once tasks are assigned</p>
-                </div>
-            )}
+
+                        {/* Weekly Breakdown Table */}
+                        {weeklyStats.length > 0 && (
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div className="px-6 py-4 border-b border-gray-100">
+                                    <h2 className="font-bold text-gray-800">Daily Breakdown</h2>
+                                </div>
+                                <div className="divide-y divide-gray-50">
+                                    {weeklyStats.map((day, i) => (
+                                        <div key={i} className="px-6 py-4">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-sm font-semibold text-gray-700">{day.date}</p>
+                                                <span className="text-xs text-gray-400">{day.total} tasks</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all"
+                                                        style={{ width: `${day.pct}%` }}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-3 text-xs">
+                                                    <span className="flex items-center gap-1 text-green-600">
+                                                        <CheckCircle size={12} />{day.completed}
+                                                    </span>
+                                                    <span className="flex items-center gap-1 text-amber-600">
+                                                        <Clock size={12} />{day.pending}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200">
+                        <BarChart2 size={40} className="text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500 font-medium">No data available yet</p>
+                        <p className="text-gray-400 text-sm mt-1">Reports will appear once tasks are assigned</p>
+                    </div>
+                )}
+            </div>
         </div>
     )
 }
