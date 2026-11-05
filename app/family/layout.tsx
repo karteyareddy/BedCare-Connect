@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { LayoutDashboard, MessageSquare, LogOut, BarChart2, CheckSquare, ChevronLeft, ChevronRight, Menu } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, LogOut, BarChart2, CheckSquare, ChevronLeft, ChevronRight, Menu, Camera } from 'lucide-react'
 import { createClient } from '@/lib/supabaseClient'
 import { useRouter, usePathname } from 'next/navigation'
 import { useLanguage } from '@/components/LanguageProvider'
@@ -37,6 +37,7 @@ export default function FamilyLayout({ children }: { children: React.ReactNode }
 
     const navItems = [
         { href: '/family/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { href: '/family/monitoring', icon: Camera, label: 'AI Monitoring' },
         { href: '/family/tasks', icon: CheckSquare, label: 'Tasks' },
         { href: '/family/reports', icon: BarChart2, label: 'Reports' },
         { href: '/family/chat', icon: MessageSquare, label: 'Chat' },

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Home, CheckSquare, MessageSquare, ChevronLeft, ChevronRight, Menu } from 'lucide-react'
+import { Home, CheckSquare, MessageSquare, ChevronLeft, ChevronRight, Menu, Camera } from 'lucide-react'
 import LogoutButton from '@/components/LogoutButton'
 import { usePathname } from 'next/navigation'
 import AiChatbot from '@/components/AiChatbot'
@@ -31,6 +31,7 @@ export default function CaretakerLayout({ children }: { children: React.ReactNod
 
     const navItems = [
         { href: '/caretaker/dashboard', icon: Home, label: t('caretakerPortal.home') },
+        { href: '/caretaker/monitoring', icon: Camera, label: 'AI Monitoring' },
         { href: '/caretaker/tasks', icon: CheckSquare, label: t('caretakerPortal.tasks') },
         { href: '/caretaker/chat', icon: MessageSquare, label: t('caretakerPortal.chat') },
     ]

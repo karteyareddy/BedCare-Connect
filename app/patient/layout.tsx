@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabaseClient'
 import { useRouter, usePathname } from 'next/navigation'
-import { LogOut, MessageCircle, LayoutDashboard, Heart, ChevronLeft, ChevronRight, Menu } from 'lucide-react'
+import { LogOut, MessageCircle, LayoutDashboard, Heart, ChevronLeft, ChevronRight, Menu, Camera } from 'lucide-react'
 import { useLanguage } from '@/components/LanguageProvider'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 
@@ -42,6 +42,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
 
     const navItems = [
         { href: '/patient/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { href: '/patient/monitoring', icon: Camera, label: 'AI Monitoring' },
         { href: '/patient/chat', icon: MessageCircle, label: t('common.chat') },
     ]
 

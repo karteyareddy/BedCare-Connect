@@ -10,6 +10,10 @@ interface BedCareDB extends DBSchema {
         key: string
         value: any
     }
+    monitoringEvents: {
+        key: string
+        value: any
+    }
     syncQueue: {
         key: string
         value: {
@@ -23,7 +27,7 @@ interface BedCareDB extends DBSchema {
 }
 
 const DB_NAME = 'bedcare-db'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export const initDB = async () => {
     return openDB<BedCareDB>(DB_NAME, DB_VERSION, {
@@ -33,6 +37,9 @@ export const initDB = async () => {
             }
             if (!db.objectStoreNames.contains('alerts')) {
                 db.createObjectStore('alerts', { keyPath: 'id' })
+            }
+            if (!db.objectStoreNames.contains('monitoringEvents')) {
+                db.createObjectStore('monitoringEvents', { keyPath: 'id' })
             }
             if (!db.objectStoreNames.contains('syncQueue')) {
                 db.createObjectStore('syncQueue', { keyPath: 'id' })
@@ -88,4 +95,19 @@ export const getSyncQueue = async () => {
 export const removeFromSyncQueue = async (id: string) => {
     const db = await initDB()
     await db.delete('syncQueue', id)
+}
+
+export const saveMonitoringEventLocally = async (event: any) => {
+    const db = await initDB()
+    await db.put('monitoringEvents', event)
+}
+
+export const getOfflineMonitoringEvents = async () => {
+    const db = await initDB()
+    return db.getAll('monitoringEvents')
+}
+
+export const removeOfflineMonitoringEvent = async (id: string) => {
+    const db = await initDB()
+    await db.delete('monitoringEvents', id)
 }

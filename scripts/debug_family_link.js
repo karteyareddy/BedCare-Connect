@@ -1,8 +1,8 @@
 const { createClient } = require('@supabase/supabase-js');
 
 // Using the credentials from seed_data.js for admin access
-const supabaseUrl = 'https://qkbstsilkczvzgxmhsnw.supabase.co';
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrYnN0c2lsa2N6dnpneG1oc253Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTQxNDkxMywiZXhwIjoyMDg2OTkwOTEzfQ.L8VrQbtMKtl7KWmq4tpH048hICLwH_VT95NzqRhochE';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // set in .env.local, never commit
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
     auth: {

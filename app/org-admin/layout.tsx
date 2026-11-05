@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { LayoutDashboard, Users, UserPlus, FileText, LogOut, Menu, Activity, PieChart, Globe } from 'lucide-react'
+import { LayoutDashboard, Users, UserPlus, FileText, LogOut, Menu, Activity, PieChart, Globe, Camera } from 'lucide-react'
 import { createClient } from '@/lib/supabaseClient'
 import { useRouter, usePathname } from 'next/navigation'
 import OrganizationGuard from '@/components/OrganizationGuard'
@@ -84,6 +84,7 @@ export default function OrgAdminLayout({
 
     const navItems = [
         { href: '/org-admin/dashboard', icon: LayoutDashboard, label: t('common.dashboard') },
+        { href: '/org-admin/monitoring', icon: Camera, label: 'AI Monitoring' },
         { href: '/org-admin/caretakers', icon: Users, label: t('common.caretakers') },
         { href: '/org-admin/patients', icon: Activity, label: t('common.patients') },
         { href: '/org-admin/tasks', icon: FileText, label: t('common.tasks') },
