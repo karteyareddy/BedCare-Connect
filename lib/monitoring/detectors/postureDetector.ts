@@ -86,4 +86,10 @@ export class PostureDetector {
       timestamp: new Date(now).toISOString(),
     };
   }
+
+  public reset() {
+    this.previousHipPositions = [];
+    this.lastReportedActivity = null;
+    this.lastReportTime = 0;
+  }
 }
