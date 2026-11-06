@@ -1,3 +1,12 @@
+<!-- banner:start -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.svg">
+    <img alt="BedCare Connect: Care coordination for bedridden patients: role-based dashboards, offline-first tasks and an AI assistant." src=".github/assets/banner-light.svg" width="100%">
+  </picture>
+</p>
+<!-- banner:end -->
+
 # BedCare Connect
 
 Role-based care-coordination platform for bedridden and home-care patients: caretakers log care tasks, families follow progress, an AI assistant answers questions, and an on-device camera module turns patient movement into verifiable activity events — all working offline and syncing to Supabase when the network returns.
